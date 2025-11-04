@@ -129,22 +129,44 @@ async function applyUpdates(updates: any) {
       // 各更新を処理
       for (const update of updates.updates) {
         const { type, data } = update;
-        if (!type || !data) continue;
+        if (!type) continue;
         
-        // 一時的なupdatesオブジェクトを作成
-        const tempUpdates = { [type]: data };
-        await processUpdates(tempUpdates);
+        // 新しい低レベル操作を処理
+        if (type === 'createNode') {
+          await createNode(data);
+        } else if (type === 'updateNode') {
+          await updateNode(data);
+        } else if (type === 'deleteNode') {
+          await deleteNode(data);
+        } else {
+          // 旧形式の更新（互換性のため）
+          if (data) {
+            const tempUpdates = { [type]: data };
+            await processUpdates(tempUpdates);
+          }
+        }
       }
     } else if (Array.isArray(updates)) {
       // 配列形式の場合（互換性のため）
       // 各更新を処理
       for (const update of updates) {
         const { type, data } = update;
-        if (!type || !data) continue;
+        if (!type) continue;
         
-        // 一時的なupdatesオブジェクトを作成
-        const tempUpdates = { [type]: data };
-        await processUpdates(tempUpdates);
+        // 新しい低レベル操作を処理
+        if (type === 'createNode') {
+          await createNode(data);
+        } else if (type === 'updateNode') {
+          await updateNode(data);
+        } else if (type === 'deleteNode') {
+          await deleteNode(data);
+        } else {
+          // 旧形式の更新（互換性のため）
+          if (data) {
+            const tempUpdates = { [type]: data };
+            await processUpdates(tempUpdates);
+          }
+        }
       }
     } else {
       // 旧形式の更新（互換性のため）
@@ -796,6 +818,314 @@ function createComponentElement(componentData: {
   figma.currentPage.appendChild(component);
   
   return component;
+}
+
+// 低レベル：任意のノードタイプを作成
+async function createNode(data: {
+  nodeType: string;
+  properties: Record<string, any>;
+  parentId?: string;
+}) {
+  const { nodeType, properties, parentId } = data;
+  
+  let node: SceneNode;
+  
+  // ノードタイプに応じて作成
+  switch (nodeType.toUpperCase()) {
+    case 'FRAME':
+      node = figma.createFrame();
+      break;
+    case 'TEXT':
+      node = figma.createText();
+      // テキストノードの場合は文字を設定する必要がある
+      if (properties.characters !== undefined) {
+        // フォントを読み込む必要がある
+        const fontFamily = properties.fontName?.family || 'Inter';
+        const fontStyle = properties.fontName?.style || properties.fontWeight || 'Regular';
+        try {
+          await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
+          (node as TextNode).characters = properties.characters;
+        } catch (e) {
+          console.error('Error loading font:', e);
+          // デフォルトフォントを試す
+          try {
+            await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+            (node as TextNode).characters = properties.characters;
+          } catch (e2) {
+            console.error('Error loading default font:', e2);
+            throw new Error(`Failed to load font: ${fontFamily} ${fontStyle}`);
+          }
+        }
+      }
+      break;
+    case 'RECTANGLE':
+      node = figma.createRectangle();
+      break;
+    case 'ELLIPSE':
+      node = figma.createEllipse();
+      break;
+    case 'LINE':
+      node = figma.createLine();
+      break;
+    case 'VECTOR':
+      node = figma.createVector();
+      break;
+    case 'STAR':
+      node = figma.createStar();
+      break;
+    case 'POLYGON':
+      node = figma.createPolygon();
+      break;
+    case 'GROUP':
+      node = figma.createGroup([], figma.currentPage);
+      break;
+    case 'COMPONENT':
+      node = figma.createComponent();
+      break;
+    case 'COMPONENT_SET':
+      node = figma.createComponentSet();
+      break;
+    case 'SECTION':
+      node = figma.createSection();
+      break;
+    default:
+      throw new Error(`Unsupported node type: ${nodeType}`);
+  }
+  
+  // プロパティを適用
+  applyPropertiesToNode(node, properties);
+  
+  // 親ノードを設定
+  let parent: BaseNode = figma.currentPage;
+  if (parentId) {
+    const foundParent = findNodeById(parentId);
+    if (foundParent && 'appendChild' in foundParent) {
+      parent = foundParent as ChildrenMixin;
+    }
+  }
+  
+  if (parent !== node.parent) {
+    parent.appendChild(node);
+  }
+  
+  // ビューポートを新しいノードに移動
+  figma.viewport.scrollAndZoomIntoView([node]);
+}
+
+// 低レベル：ノードのプロパティを更新
+async function updateNode(data: {
+  nodeId: string;
+  properties?: Record<string, any>;
+  parentId?: string;
+  index?: number;
+}) {
+  const { nodeId, properties, parentId, index } = data;
+  
+  const node = findNodeById(nodeId);
+  if (!node) {
+    throw new Error(`Node with id ${nodeId} not found`);
+  }
+  
+  // 親ノードを変更する場合
+  if (parentId !== undefined) {
+    const newParent = findNodeById(parentId);
+    if (newParent && 'appendChild' in newParent) {
+      const parent = newParent as ChildrenMixin;
+      if (index !== undefined) {
+        parent.insertChild(index, node);
+      } else {
+        parent.appendChild(node);
+      }
+    }
+  }
+  
+  // プロパティを更新
+  if (properties) {
+    applyPropertiesToNode(node, properties);
+  }
+}
+
+// 低レベル：ノードを削除
+function deleteNode(data: { nodeId: string }) {
+  const { nodeId } = data;
+  
+  const node = findNodeById(nodeId);
+  if (!node) {
+    throw new Error(`Node with id ${nodeId} not found`);
+  }
+  
+  node.remove();
+}
+
+// ノードIDでノードを検索（再帰的、全ページを検索）
+function findNodeById(nodeId: string): SceneNode | null {
+  function search(node: BaseNode): SceneNode | null {
+    // ノードIDを直接比較（Figma REST APIのID形式とプラグインAPIのID形式を両方サポート）
+    if (node.id === nodeId && 'type' in node) {
+      return node as SceneNode;
+    }
+    
+    // childrenを持つノードを検索
+    if ('children' in node) {
+      for (const child of node.children) {
+        const found = search(child);
+        if (found) return found;
+      }
+    }
+    
+    return null;
+  }
+  
+  // まずルートを検索（通常はDocumentNode）
+  const rootResult = search(figma.root);
+  if (rootResult) return rootResult;
+  
+  // 全ページを検索
+  for (const page of figma.root.children) {
+    const pageResult = search(page);
+    if (pageResult) return pageResult;
+  }
+  
+  return null;
+}
+
+// ノードにプロパティを適用する汎用関数
+function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>) {
+  // 基本プロパティ
+  if (properties.name !== undefined) node.name = properties.name;
+  if (properties.x !== undefined) node.x = properties.x;
+  if (properties.y !== undefined) node.y = properties.y;
+  if (properties.opacity !== undefined) node.opacity = properties.opacity;
+  if (properties.visible !== undefined) node.visible = properties.visible;
+  if (properties.blendMode !== undefined) node.blendMode = properties.blendMode;
+  
+  // レイアウト可能なノード
+  if ('resize' in node) {
+    const layoutNode = node as LayoutMixin;
+    if (properties.width !== undefined || properties.height !== undefined) {
+      const width = properties.width !== undefined ? properties.width : layoutNode.width;
+      const height = properties.height !== undefined ? properties.height : layoutNode.height;
+      layoutNode.resize(width, height);
+    }
+  }
+  
+  // 塗りつぶしとストローク
+  if ('fills' in node) {
+    const paintNode = node as GeometryMixin;
+    if (properties.fills !== undefined) {
+      try {
+        paintNode.fills = properties.fills as Paint[];
+      } catch (e) {
+        console.error('Error setting fills:', e);
+      }
+    }
+    if (properties.strokes !== undefined) {
+      try {
+        paintNode.strokes = properties.strokes as Paint[];
+      } catch (e) {
+        console.error('Error setting strokes:', e);
+      }
+    }
+    if (properties.strokeWeight !== undefined) paintNode.strokeWeight = properties.strokeWeight;
+    if (properties.strokeAlign !== undefined) paintNode.strokeAlign = properties.strokeAlign;
+    if (properties.strokeCap !== undefined && 'strokeCap' in paintNode) {
+      (paintNode as any).strokeCap = properties.strokeCap;
+    }
+    if (properties.strokeJoin !== undefined && 'strokeJoin' in paintNode) {
+      (paintNode as any).strokeJoin = properties.strokeJoin;
+    }
+  }
+  
+  // 角丸
+  if ('cornerRadius' in node) {
+    const cornerNode = node as CornerMixin;
+    if (properties.cornerRadius !== undefined) cornerNode.cornerRadius = properties.cornerRadius;
+    if (properties.topLeftRadius !== undefined) cornerNode.topLeftRadius = properties.topLeftRadius;
+    if (properties.topRightRadius !== undefined) cornerNode.topRightRadius = properties.topRightRadius;
+    if (properties.bottomLeftRadius !== undefined) cornerNode.bottomLeftRadius = properties.bottomLeftRadius;
+    if (properties.bottomRightRadius !== undefined) cornerNode.bottomRightRadius = properties.bottomRightRadius;
+  }
+  
+  // エフェクト
+  if ('effects' in node) {
+    const effectNode = node as EffectMixin;
+    if (properties.effects !== undefined) {
+      try {
+        effectNode.effects = properties.effects as Effect[];
+      } catch (e) {
+        console.error('Error setting effects:', e);
+      }
+    }
+  }
+  
+  // テキストノードの特別なプロパティ
+  if (node.type === 'TEXT') {
+    const textNode = node as TextNode;
+    if (properties.characters !== undefined) {
+      textNode.characters = properties.characters;
+    }
+    if (properties.fontSize !== undefined) textNode.fontSize = properties.fontSize;
+    if (properties.fontName !== undefined) {
+      const fontName = properties.fontName;
+      textNode.fontName = { family: fontName.family, style: fontName.style };
+    } else if (properties.fontWeight !== undefined) {
+      // フォントウェイトだけが指定された場合、現在のフォントファミリーを使用
+      const currentFont = textNode.fontName;
+      textNode.fontName = { family: currentFont.family, style: properties.fontWeight };
+    }
+    if (properties.letterSpacing !== undefined) textNode.letterSpacing = properties.letterSpacing;
+    if (properties.lineHeight !== undefined) {
+      if (typeof properties.lineHeight === 'object') {
+        textNode.lineHeight = properties.lineHeight;
+      } else {
+        textNode.lineHeight = { value: properties.lineHeight, unit: 'PIXELS' };
+      }
+    }
+    if (properties.textAlignHorizontal !== undefined) textNode.textAlignHorizontal = properties.textAlignHorizontal;
+    if (properties.textAlignVertical !== undefined) textNode.textAlignVertical = properties.textAlignVertical;
+    if (properties.textCase !== undefined) textNode.textCase = properties.textCase;
+    if (properties.textDecoration !== undefined) textNode.textDecoration = properties.textDecoration;
+    if (properties.paragraphIndent !== undefined) textNode.paragraphIndent = properties.paragraphIndent;
+    if (properties.paragraphSpacing !== undefined) textNode.paragraphSpacing = properties.paragraphSpacing;
+    if (properties.textAutoResize !== undefined) textNode.textAutoResize = properties.textAutoResize;
+  }
+  
+  // フレームノードの特別なプロパティ
+  if (node.type === 'FRAME') {
+    const frameNode = node as FrameNode;
+    if (properties.layoutMode !== undefined) frameNode.layoutMode = properties.layoutMode;
+    if (properties.primaryAxisSizingMode !== undefined) frameNode.primaryAxisSizingMode = properties.primaryAxisSizingMode;
+    if (properties.counterAxisSizingMode !== undefined) frameNode.counterAxisSizingMode = properties.counterAxisSizingMode;
+    if (properties.paddingLeft !== undefined) frameNode.paddingLeft = properties.paddingLeft;
+    if (properties.paddingRight !== undefined) frameNode.paddingRight = properties.paddingRight;
+    if (properties.paddingTop !== undefined) frameNode.paddingTop = properties.paddingTop;
+    if (properties.paddingBottom !== undefined) frameNode.paddingBottom = properties.paddingBottom;
+    if (properties.itemSpacing !== undefined) frameNode.itemSpacing = properties.itemSpacing;
+  }
+  
+  // 楕円ノードの特別なプロパティ
+  if (node.type === 'ELLIPSE') {
+    const ellipseNode = node as EllipseNode;
+    if (properties.arcData !== undefined) ellipseNode.arcData = properties.arcData;
+  }
+  
+  // 線ノードの特別なプロパティ
+  if (node.type === 'LINE') {
+    const lineNode = node as LineNode;
+    // 線の場合は既にstrokeCapを処理済み
+  }
+  
+  // ベクターノードの特別なプロパティ
+  if (node.type === 'VECTOR') {
+    const vectorNode = node as VectorNode;
+    if (properties.vectorNetwork !== undefined) vectorNode.vectorNetwork = properties.vectorNetwork;
+  }
+  
+  // コンポーネントノードの特別なプロパティ
+  if (node.type === 'COMPONENT') {
+    const componentNode = node as ComponentNode;
+    if (properties.description !== undefined) componentNode.description = properties.description;
+  }
 }
 
 // UIからのメッセージを処理

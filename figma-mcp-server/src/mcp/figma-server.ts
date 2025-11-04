@@ -14,7 +14,11 @@ import {
   GET_FILE_TOOL_NAME,
   GET_FILE_TOOL_DESCRIPTION,
   USAGE_TOOL_NAME,
-  USAGE_TOOL_DESCRIPTION
+  USAGE_TOOL_DESCRIPTION,
+  CREATE_NODE_TOOL_NAME,
+  CREATE_NODE_TOOL_DESCRIPTION,
+  UPDATE_NODE_TOOL_NAME,
+  UPDATE_NODE_TOOL_DESCRIPTION
 } from '../config/index.js';
 import { getToolHandler, toolUsageRegistry } from '../tools/index.js';
 
@@ -66,7 +70,19 @@ export class FigmaServer {
       ListToolsRequestSchema,
       async () => ({
         tools: [
-          // update_file ツール
+          // create_node ツール (low-level)
+          {
+            name: CREATE_NODE_TOOL_NAME,
+            description: CREATE_NODE_TOOL_DESCRIPTION,
+            inputSchema: toolUsageRegistry["create_node"].inputSchema
+          },
+          // update_node ツール (low-level)
+          {
+            name: UPDATE_NODE_TOOL_NAME,
+            description: UPDATE_NODE_TOOL_DESCRIPTION,
+            inputSchema: toolUsageRegistry["update_node"].inputSchema
+          },
+          // update_file ツール (legacy, higher-level)
           {
             name: UPDATE_FILE_TOOL_NAME,
             description: UPDATE_FILE_TOOL_DESCRIPTION,

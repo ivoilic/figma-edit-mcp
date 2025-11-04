@@ -18,3 +18,11 @@ export const GET_FILE_TOOL_DESCRIPTION = "Retrieves the contents of a Figma file
 // 使い方取得ツール設定
 export const USAGE_TOOL_NAME = "get_mcp_tool_usage";
 export const USAGE_TOOL_DESCRIPTION = "Get detailed usage information, parameter descriptions, and sample code for MCP tools";
+
+// ノード作成ツール設定
+export const CREATE_NODE_TOOL_NAME = "create_node";
+export const CREATE_NODE_TOOL_DESCRIPTION = "Creates any Figma node type with any properties. Low-level tool for maximum flexibility.";
+
+// ノード更新ツール設定
+export const UPDATE_NODE_TOOL_NAME = "update_node";
+export const UPDATE_NODE_TOOL_DESCRIPTION = "Updates any property of an existing Figma node or deletes it. Low-level tool for maximum flexibility.";
