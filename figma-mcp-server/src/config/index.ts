@@ -22,3 +22,16 @@ export const CREATE_NODE_TOOL_DESCRIPTION = "Creates any Figma node type with an
 // Node update tool configuration
 export const UPDATE_NODE_TOOL_NAME = "update_node";
 export const UPDATE_NODE_TOOL_DESCRIPTION = "Updates any property of an existing Figma node or deletes it. Low-level tool for maximum flexibility.";
+
+// Variable tools configuration
+export const GET_VARIABLES_TOOL_NAME = "get_variables";
+export const GET_VARIABLES_TOOL_DESCRIPTION = "Retrieves all variables from a Figma file";
+
+export const CREATE_VARIABLE_TOOL_NAME = "create_variable";
+export const CREATE_VARIABLE_TOOL_DESCRIPTION = "Creates a new variable in a Figma file";
+
+export const UPDATE_VARIABLE_TOOL_NAME = "update_variable";
+export const UPDATE_VARIABLE_TOOL_DESCRIPTION = "Updates an existing variable in a Figma file";
+
+export const DELETE_VARIABLE_TOOL_NAME = "delete_variable";
+export const DELETE_VARIABLE_TOOL_DESCRIPTION = "Deletes a variable from a Figma file";

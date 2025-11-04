@@ -16,7 +16,15 @@ import {
   CREATE_NODE_TOOL_NAME,
   CREATE_NODE_TOOL_DESCRIPTION,
   UPDATE_NODE_TOOL_NAME,
-  UPDATE_NODE_TOOL_DESCRIPTION
+  UPDATE_NODE_TOOL_DESCRIPTION,
+  GET_VARIABLES_TOOL_NAME,
+  GET_VARIABLES_TOOL_DESCRIPTION,
+  CREATE_VARIABLE_TOOL_NAME,
+  CREATE_VARIABLE_TOOL_DESCRIPTION,
+  UPDATE_VARIABLE_TOOL_NAME,
+  UPDATE_VARIABLE_TOOL_DESCRIPTION,
+  DELETE_VARIABLE_TOOL_NAME,
+  DELETE_VARIABLE_TOOL_DESCRIPTION
 } from '../config/index.js';
 import { getToolHandler, toolUsageRegistry } from '../tools/index.js';
 
@@ -91,6 +99,30 @@ export class FigmaServer {
             name: USAGE_TOOL_NAME,
             description: USAGE_TOOL_DESCRIPTION,
             inputSchema: toolUsageRegistry["get_mcp_tool_usage"].inputSchema
+          },
+          // get_variables tool
+          {
+            name: GET_VARIABLES_TOOL_NAME,
+            description: GET_VARIABLES_TOOL_DESCRIPTION,
+            inputSchema: toolUsageRegistry["get_variables"].inputSchema
+          },
+          // create_variable tool
+          {
+            name: CREATE_VARIABLE_TOOL_NAME,
+            description: CREATE_VARIABLE_TOOL_DESCRIPTION,
+            inputSchema: toolUsageRegistry["create_variable"].inputSchema
+          },
+          // update_variable tool
+          {
+            name: UPDATE_VARIABLE_TOOL_NAME,
+            description: UPDATE_VARIABLE_TOOL_DESCRIPTION,
+            inputSchema: toolUsageRegistry["update_variable"].inputSchema
+          },
+          // delete_variable tool
+          {
+            name: DELETE_VARIABLE_TOOL_NAME,
+            description: DELETE_VARIABLE_TOOL_DESCRIPTION,
+            inputSchema: toolUsageRegistry["delete_variable"].inputSchema
           }
         ]
       })

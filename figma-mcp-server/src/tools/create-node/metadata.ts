@@ -136,6 +136,34 @@ export const createNodeMetadata: ToolUsageInfo = {
 }
 </arguments>
 </use_mcp_tool>`
+    },
+    {
+      title: "Create Rectangle Using Variable",
+      description: "Create a rectangle that uses a color variable for its fill",
+      code: `<use_mcp_tool>
+<server_name>figma-mcp-server</server_name>
+<tool_name>create_node</tool_name>
+<arguments>
+{
+  "fileId": "YOUR_FIGMA_FILE_ID",
+  "nodeType": "RECTANGLE",
+  "properties": {
+    "name": "Button with Variable",
+    "x": 100,
+    "y": 100,
+    "width": 200,
+    "height": 50,
+    "fills": [
+      {
+        "type": "VARIABLE",
+        "variableId": "VARIABLE_ID_FROM_GET_VARIABLES"
+      }
+    ],
+    "cornerRadius": 8
+  }
+}
+</arguments>
+</use_mcp_tool>`
     }
   ],
   notes: [
@@ -143,6 +171,8 @@ export const createNodeMetadata: ToolUsageInfo = {
     "All properties are passed directly to Figma's API, so you must use the exact property names and types from the Figma Plugin API.",
     "For text nodes, you must include the 'characters' property with the text content.",
     "Color values in fills and strokes use RGB values from 0 to 1.",
+    "To use variables in fills or strokes, use: { type: 'VARIABLE', variableId: 'VARIABLE_ID' }",
+    "Variables can be retrieved using get_variables tool.",
     "Refer to Figma Plugin API documentation for complete list of available properties for each node type.",
     "If parentId is provided, the node will be added as a child of that node. Otherwise, it will be added to the current page."
   ]

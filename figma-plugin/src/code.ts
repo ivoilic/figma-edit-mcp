@@ -1009,19 +1009,48 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
     }
   }
   
-  // Fills and strokes
+  // Fills and strokes (support variables)
   if ('fills' in node) {
     const paintNode = node as GeometryMixin;
     if (properties.fills !== undefined) {
       try {
-        paintNode.fills = properties.fills as Paint[];
+        // Support variable references in fills
+        const fills = properties.fills.map((fill: any) => {
+          if (fill.type === 'VARIABLE' && fill.variableId) {
+            // Convert variable reference to variable paint
+            const variable = figma.variables.getVariableById(fill.variableId);
+            if (variable) {
+              return {
+                type: 'VARIABLE',
+                variableId: fill.variableId,
+                resolvedType: variable.resolvedType
+              } as VariablePaint;
+            }
+          }
+          return fill;
+        });
+        paintNode.fills = fills as Paint[];
       } catch (e) {
         console.error('Error setting fills:', e);
       }
     }
     if (properties.strokes !== undefined) {
       try {
-        paintNode.strokes = properties.strokes as Paint[];
+        // Support variable references in strokes
+        const strokes = properties.strokes.map((stroke: any) => {
+          if (stroke.type === 'VARIABLE' && stroke.variableId) {
+            const variable = figma.variables.getVariableById(stroke.variableId);
+            if (variable) {
+              return {
+                type: 'VARIABLE',
+                variableId: stroke.variableId,
+                resolvedType: variable.resolvedType
+              } as VariablePaint;
+            }
+          }
+          return stroke;
+        });
+        paintNode.strokes = strokes as Paint[];
       } catch (e) {
         console.error('Error setting strokes:', e);
       }
@@ -1125,6 +1154,186 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
   if (node.type === 'COMPONENT') {
     const componentNode = node as ComponentNode;
     if (properties.description !== undefined) componentNode.description = properties.description;
+  }
+}
+
+// Get all variables from the file
+async function getVariables() {
+  try {
+    const variables = figma.variables.getLocalVariables();
+    const collections = figma.variables.getLocalVariableCollections();
+    
+    const result = {
+      variables: variables.map(v => ({
+        id: v.id,
+        name: v.name,
+        type: v.resolvedType,
+        valuesByMode: v.valuesByMode,
+        scopes: v.scopes,
+        description: v.description || '',
+        hiddenFromPublishing: v.hiddenFromPublishing
+      })),
+      collections: collections.map(c => ({
+        id: c.id,
+        name: c.name,
+        modes: c.modes,
+        variableIds: c.variableIds
+      }))
+    };
+    
+    logToUI(`Retrieved ${variables.length} variables and ${collections.length} collections`);
+    figma.notify(`Retrieved ${variables.length} variables`);
+    
+    // Send variables back to server (could be enhanced to return via API)
+    console.log('Variables:', JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error('Error getting variables:', error);
+    logToUI(`Error getting variables: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error getting variables', { error: true });
+  }
+}
+
+// Create a new variable
+async function createVariable(data: {
+  name: string;
+  variableType: 'COLOR' | 'FLOAT' | 'STRING' | 'BOOLEAN';
+  valuesByMode: Record<string, any>;
+  collectionId?: string;
+  description?: string;
+  scopes?: Array<'ALL_SCOPES' | 'TEXT_COLOR' | 'BG_COLOR' | 'FILL_COLOR' | 'STROKE_COLOR' | 'EFFECT_COLOR' | 'OPACITY' | 'FONT_FAMILY' | 'FONT_SIZE' | 'FONT_WEIGHT' | 'LINE_HEIGHT' | 'LETTER_SPACING' | 'PARAGRAPH_SPACING' | 'PARAGRAPH_INDENT' | 'BORDER_RADIUS' | 'SPACING' | 'DIMENSION' | 'GAP' | 'SIZING_WIDTH' | 'SIZING_HEIGHT'>;
+}) {
+  try {
+    const { name, variableType, valuesByMode, collectionId, description, scopes } = data;
+    
+    // Get or create collection
+    let collection: VariableCollection;
+    if (collectionId) {
+      const collections = figma.variables.getLocalVariableCollections();
+      collection = collections.find(c => c.id === collectionId) || null;
+      if (!collection) {
+        throw new Error(`Collection with id ${collectionId} not found`);
+      }
+    } else {
+      // Use existing collection or create default
+      const collections = figma.variables.getLocalVariableCollections();
+      collection = collections.length > 0 ? collections[0] : figma.variables.createVariableCollection('Default');
+    }
+    
+    // Get first mode ID for variable creation
+    const firstModeId = collection.modes[0]?.modeId;
+    if (!firstModeId) {
+      throw new Error('Collection must have at least one mode');
+    }
+    
+    // Get first value for initial creation
+    const firstValue = valuesByMode[firstModeId];
+    if (firstValue === undefined) {
+      // Try to get any value from valuesByMode
+      const anyValue = Object.values(valuesByMode)[0];
+      if (anyValue === undefined) {
+        throw new Error('At least one value must be provided');
+      }
+    }
+    
+    // Create variable with first mode value
+    const variable = figma.variables.createVariable(name, collection, variableType);
+    
+    // Set values for all modes
+    for (const [modeId, value] of Object.entries(valuesByMode)) {
+      // Verify mode exists in collection
+      const modeExists = collection.modes.some(m => m.modeId === modeId);
+      if (modeExists) {
+        variable.setValueForMode(modeId, value);
+      } else {
+        console.warn(`Mode ${modeId} not found in collection, skipping`);
+      }
+    }
+    
+    // Set description
+    if (description) {
+      variable.description = description;
+    }
+    
+    // Set scopes
+    if (scopes && scopes.length > 0) {
+      variable.scopes = scopes;
+    }
+    
+    logToUI(`Created variable: ${name}`);
+    figma.notify(`Created variable: ${name}`);
+  } catch (error) {
+    console.error('Error creating variable:', error);
+    logToUI(`Error creating variable: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error creating variable', { error: true });
+  }
+}
+
+// Update an existing variable
+async function updateVariable(data: {
+  variableId: string;
+  name?: string;
+  valuesByMode?: Record<string, any>;
+  description?: string;
+  scopes?: Array<'ALL_SCOPES' | 'TEXT_COLOR' | 'BG_COLOR' | 'FILL_COLOR' | 'STROKE_COLOR' | 'EFFECT_COLOR' | 'OPACITY' | 'FONT_FAMILY' | 'FONT_SIZE' | 'FONT_WEIGHT' | 'LINE_HEIGHT' | 'LETTER_SPACING' | 'PARAGRAPH_SPACING' | 'PARAGRAPH_INDENT' | 'BORDER_RADIUS' | 'SPACING' | 'DIMENSION' | 'GAP' | 'SIZING_WIDTH' | 'SIZING_HEIGHT'>;
+}) {
+  try {
+    const { variableId, name, valuesByMode, description, scopes } = data;
+    
+    const variable = figma.variables.getVariableById(variableId);
+    if (!variable) {
+      throw new Error(`Variable with id ${variableId} not found`);
+    }
+    
+    // Update name
+    if (name !== undefined) {
+      variable.name = name;
+    }
+    
+    // Update values by mode
+    if (valuesByMode) {
+      for (const [modeId, value] of Object.entries(valuesByMode)) {
+        variable.setValueForMode(modeId, value);
+      }
+    }
+    
+    // Update description
+    if (description !== undefined) {
+      variable.description = description;
+    }
+    
+    // Update scopes
+    if (scopes !== undefined) {
+      variable.scopes = scopes;
+    }
+    
+    logToUI(`Updated variable: ${variable.name}`);
+    figma.notify(`Updated variable: ${variable.name}`);
+  } catch (error) {
+    console.error('Error updating variable:', error);
+    logToUI(`Error updating variable: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error updating variable', { error: true });
+  }
+}
+
+// Delete a variable
+async function deleteVariable(data: { variableId: string }) {
+  try {
+    const { variableId } = data;
+    
+    const variable = figma.variables.getVariableById(variableId);
+    if (!variable) {
+      throw new Error(`Variable with id ${variableId} not found`);
+    }
+    
+    const variableName = variable.name;
+    variable.remove();
+    
+    logToUI(`Deleted variable: ${variableName}`);
+    figma.notify(`Deleted variable: ${variableName}`);
+  } catch (error) {
+    console.error('Error deleting variable:', error);
+    logToUI(`Error deleting variable: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error deleting variable', { error: true });
   }
 }
 
