@@ -1,9 +1,9 @@
-// MCPサーバーとの通信設定
+// Communication settings with MCP server
 const MCP_SERVER_URL = 'http://localhost:5678';
-const POLLING_INTERVAL = 1000; // 1秒ごとにポーリング
-const DEBUG = false; // デバッグモードを無効化
+const POLLING_INTERVAL = 1000; // Poll every 1 second
+const DEBUG = false; // Disable debug mode
 
-// ログ出力関数（UIに必要なログのみ）
+// Log output function (only logs needed for UI)
 function logToUI(message: string, type: 'log' | 'error' = 'log') {
   try {
     figma.ui.postMessage({
@@ -15,39 +15,39 @@ function logToUI(message: string, type: 'log' | 'error' = 'log') {
   }
 }
 
-// プラグインの初期化
+// Initialize plugin
 figma.showUI(__html__, { width: 300, height: 400 });
 
-// フォントの読み込み状態を追跡
+// Track font loading status
 let fontsLoaded = false;
 
-// よく使用するフォントを事前に読み込む
+// Preload commonly used fonts
 Promise.all([
   figma.loadFontAsync({ family: "Inter", style: "Regular" }),
   figma.loadFontAsync({ family: "Inter", style: "Bold" })
 ]).then(() => {
   logToUI('Fonts loaded successfully');
   fontsLoaded = true;
-  // フォントの読み込みが完了したら、サーバーに接続
+  // Connect to server after fonts are loaded
   healthcheckWithServer();
 }).catch(error => {
   console.error('Error preloading fonts:', error);
   logToUI('Failed to load fonts, but attempting to connect anyway', 'error');
-  // エラーが発生しても接続は試みる
+  // Attempt to connect even if error occurs
   healthcheckWithServer();
 });
 
-// プラグインIDとファイルIDを取得
+// Get plugin ID and file ID
 const pluginId = figma.root.getPluginData('pluginId') || `plugin-${Date.now()}`;
 const fileId = figma.fileKey || `local-file-${Date.now()}`;
 
-// プラグインIDを保存
+// Save plugin ID
 figma.root.setPluginData('pluginId', pluginId);
 
-// ポーリング間隔の管理
+// Manage polling interval
 let pollingInterval: number | null = null;
 
-// ポーリングを開始する関数
+// Function to start polling
 function startPolling() {
   if (pollingInterval) {
     clearInterval(pollingInterval);
@@ -58,7 +58,7 @@ function startPolling() {
   }, POLLING_INTERVAL) as unknown as number;
 }
 
-// MCPサーバーにプラグインを登録
+// Register plugin with MCP server
 async function healthcheckWithServer() {
   try {
     logToUI('Connecting to MCP server...');
@@ -81,7 +81,7 @@ async function healthcheckWithServer() {
     logToUI(`Connected to MCP server (File ID: ${fileId})`);
     figma.ui.postMessage({ type: 'connection-success', fileId });
     
-    // 接続成功後、ポーリングを開始
+    // Start polling after successful connection
     startPolling();
   } catch (error: unknown) {
     console.error('Failed to connect to MCP server:', error);
@@ -91,7 +91,7 @@ async function healthcheckWithServer() {
   }
 }
 
-// MCPサーバーからメッセージをポーリング
+// Poll for messages from MCP server
 async function pollForMessages() {
   try {
     const response = await fetch(`${MCP_SERVER_URL}/plugin/poll/${fileId}/${pluginId}`);
@@ -102,11 +102,11 @@ async function pollForMessages() {
     
     const data = await response.json();
     if (data && data.messages && data.messages.length > 0) {
-      // 各メッセージを処理
+      // Process each message
       for (const message of data.messages) {
         if (message.type === 'update') {
           try {
-            // 更新を適用
+            // Apply updates
             await applyUpdates(message.updates);
           } catch (error) {
             console.error('Error applying updates:', error);
@@ -183,9 +183,9 @@ async function applyUpdates(updates: any) {
   }
 }
 
-// 更新を処理する関数
+// Function to process updates
 async function processUpdates(updates: any) {
-  // フレーム作成
+  // Create frame
   if (updates.createFrame) {
     const { name, width, height, fills, x, y, cornerRadius, layoutMode, primaryAxisSizingMode, 
       counterAxisSizingMode, paddingLeft, paddingRight, paddingTop, paddingBottom, itemSpacing,
@@ -820,7 +820,7 @@ function createComponentElement(componentData: {
   return component;
 }
 
-// 低レベル：任意のノードタイプを作成
+// Low-level: Create any node type
 async function createNode(data: {
   nodeType: string;
   properties: Record<string, any>;
@@ -830,16 +830,16 @@ async function createNode(data: {
   
   let node: SceneNode;
   
-  // ノードタイプに応じて作成
+  // Create based on node type
   switch (nodeType.toUpperCase()) {
     case 'FRAME':
       node = figma.createFrame();
       break;
     case 'TEXT':
       node = figma.createText();
-      // テキストノードの場合は文字を設定する必要がある
+      // For text nodes, characters must be set
       if (properties.characters !== undefined) {
-        // フォントを読み込む必要がある
+        // Font must be loaded
         const fontFamily = properties.fontName?.family || 'Inter';
         const fontStyle = properties.fontName?.style || properties.fontWeight || 'Regular';
         try {
@@ -847,7 +847,7 @@ async function createNode(data: {
           (node as TextNode).characters = properties.characters;
         } catch (e) {
           console.error('Error loading font:', e);
-          // デフォルトフォントを試す
+          // Try default font
           try {
             await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
             (node as TextNode).characters = properties.characters;
@@ -892,10 +892,10 @@ async function createNode(data: {
       throw new Error(`Unsupported node type: ${nodeType}`);
   }
   
-  // プロパティを適用
+  // Apply properties
   applyPropertiesToNode(node, properties);
   
-  // 親ノードを設定
+  // Set parent node
   let parent: BaseNode = figma.currentPage;
   if (parentId) {
     const foundParent = findNodeById(parentId);
@@ -908,11 +908,11 @@ async function createNode(data: {
     parent.appendChild(node);
   }
   
-  // ビューポートを新しいノードに移動
+  // Move viewport to new node
   figma.viewport.scrollAndZoomIntoView([node]);
 }
 
-// 低レベル：ノードのプロパティを更新
+// Low-level: Update node properties
 async function updateNode(data: {
   nodeId: string;
   properties?: Record<string, any>;
@@ -926,7 +926,7 @@ async function updateNode(data: {
     throw new Error(`Node with id ${nodeId} not found`);
   }
   
-  // 親ノードを変更する場合
+  // Change parent node if needed
   if (parentId !== undefined) {
     const newParent = findNodeById(parentId);
     if (newParent && 'appendChild' in newParent) {
@@ -939,13 +939,13 @@ async function updateNode(data: {
     }
   }
   
-  // プロパティを更新
+  // Update properties
   if (properties) {
     applyPropertiesToNode(node, properties);
   }
 }
 
-// 低レベル：ノードを削除
+// Low-level: Delete node
 function deleteNode(data: { nodeId: string }) {
   const { nodeId } = data;
   
@@ -957,15 +957,15 @@ function deleteNode(data: { nodeId: string }) {
   node.remove();
 }
 
-// ノードIDでノードを検索（再帰的、全ページを検索）
+// Search for node by ID (recursive, search all pages)
 function findNodeById(nodeId: string): SceneNode | null {
   function search(node: BaseNode): SceneNode | null {
-    // ノードIDを直接比較（Figma REST APIのID形式とプラグインAPIのID形式を両方サポート）
+    // Directly compare node IDs (supports both Figma REST API ID format and plugin API ID format)
     if (node.id === nodeId && 'type' in node) {
       return node as SceneNode;
     }
     
-    // childrenを持つノードを検索
+    // Search nodes with children
     if ('children' in node) {
       for (const child of node.children) {
         const found = search(child);
@@ -976,11 +976,11 @@ function findNodeById(nodeId: string): SceneNode | null {
     return null;
   }
   
-  // まずルートを検索（通常はDocumentNode）
+  // First search root (usually DocumentNode)
   const rootResult = search(figma.root);
   if (rootResult) return rootResult;
   
-  // 全ページを検索
+  // Search all pages
   for (const page of figma.root.children) {
     const pageResult = search(page);
     if (pageResult) return pageResult;
@@ -989,9 +989,9 @@ function findNodeById(nodeId: string): SceneNode | null {
   return null;
 }
 
-// ノードにプロパティを適用する汎用関数
+// Generic function to apply properties to node
 function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>) {
-  // 基本プロパティ
+  // Basic properties
   if (properties.name !== undefined) node.name = properties.name;
   if (properties.x !== undefined) node.x = properties.x;
   if (properties.y !== undefined) node.y = properties.y;
@@ -999,7 +999,7 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
   if (properties.visible !== undefined) node.visible = properties.visible;
   if (properties.blendMode !== undefined) node.blendMode = properties.blendMode;
   
-  // レイアウト可能なノード
+  // Layout-capable nodes
   if ('resize' in node) {
     const layoutNode = node as LayoutMixin;
     if (properties.width !== undefined || properties.height !== undefined) {
@@ -1009,7 +1009,7 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
     }
   }
   
-  // 塗りつぶしとストローク
+  // Fills and strokes
   if ('fills' in node) {
     const paintNode = node as GeometryMixin;
     if (properties.fills !== undefined) {
@@ -1036,7 +1036,7 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
     }
   }
   
-  // 角丸
+  // Corner radius
   if ('cornerRadius' in node) {
     const cornerNode = node as CornerMixin;
     if (properties.cornerRadius !== undefined) cornerNode.cornerRadius = properties.cornerRadius;
@@ -1046,7 +1046,7 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
     if (properties.bottomRightRadius !== undefined) cornerNode.bottomRightRadius = properties.bottomRightRadius;
   }
   
-  // エフェクト
+  // Effects
   if ('effects' in node) {
     const effectNode = node as EffectMixin;
     if (properties.effects !== undefined) {
@@ -1058,7 +1058,7 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
     }
   }
   
-  // テキストノードの特別なプロパティ
+  // Text node specific properties
   if (node.type === 'TEXT') {
     const textNode = node as TextNode;
     if (properties.characters !== undefined) {
@@ -1069,7 +1069,7 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
       const fontName = properties.fontName;
       textNode.fontName = { family: fontName.family, style: fontName.style };
     } else if (properties.fontWeight !== undefined) {
-      // フォントウェイトだけが指定された場合、現在のフォントファミリーを使用
+      // If only fontWeight is specified, use current font family
       const currentFont = textNode.fontName;
       textNode.fontName = { family: currentFont.family, style: properties.fontWeight };
     }
@@ -1090,7 +1090,7 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
     if (properties.textAutoResize !== undefined) textNode.textAutoResize = properties.textAutoResize;
   }
   
-  // フレームノードの特別なプロパティ
+  // Frame node specific properties
   if (node.type === 'FRAME') {
     const frameNode = node as FrameNode;
     if (properties.layoutMode !== undefined) frameNode.layoutMode = properties.layoutMode;
@@ -1103,32 +1103,32 @@ function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>)
     if (properties.itemSpacing !== undefined) frameNode.itemSpacing = properties.itemSpacing;
   }
   
-  // 楕円ノードの特別なプロパティ
+  // Ellipse node specific properties
   if (node.type === 'ELLIPSE') {
     const ellipseNode = node as EllipseNode;
     if (properties.arcData !== undefined) ellipseNode.arcData = properties.arcData;
   }
   
-  // 線ノードの特別なプロパティ
+  // Line node specific properties
   if (node.type === 'LINE') {
     const lineNode = node as LineNode;
-    // 線の場合は既にstrokeCapを処理済み
+    // strokeCap is already handled above
   }
   
-  // ベクターノードの特別なプロパティ
+  // Vector node specific properties
   if (node.type === 'VECTOR') {
     const vectorNode = node as VectorNode;
     if (properties.vectorNetwork !== undefined) vectorNode.vectorNetwork = properties.vectorNetwork;
   }
   
-  // コンポーネントノードの特別なプロパティ
+  // Component node specific properties
   if (node.type === 'COMPONENT') {
     const componentNode = node as ComponentNode;
     if (properties.description !== undefined) componentNode.description = properties.description;
   }
 }
 
-// UIからのメッセージを処理
+// Handle messages from UI
 figma.ui.onmessage = (msg) => {
   if (msg.type === 'register') {
     healthcheckWithServer();

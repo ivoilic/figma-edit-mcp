@@ -4,9 +4,9 @@ import { FIGMA_ACCESS_TOKEN } from '../../config/index.js';
 import axios from 'axios';
 
 /**
- * get_file ツールのハンドラー
- * @param params ツールパラメータ
- * @returns ツールの実行結果
+ * Handler for get_file tool
+ * @param params Tool parameters
+ * @returns Tool execution result
  */
 export async function handleGetFileTool(params: FigmaGetFileParams) {
   try {
@@ -24,7 +24,7 @@ export async function handleGetFileTool(params: FigmaGetFileParams) {
       };
     }
     
-    // クエリパラメータの構築
+    // Build query parameters
     const queryParams = new URLSearchParams();
     
     if (includeComponents) {
@@ -43,7 +43,7 @@ export async function handleGetFileTool(params: FigmaGetFileParams) {
       queryParams.append('depth', depth.toString());
     }
     
-    // Figma APIを呼び出してファイルの内容を取得
+    // Call Figma API to get file contents
     const url = `https://api.figma.com/v1/files/${fileId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     try {
@@ -55,7 +55,7 @@ export async function handleGetFileTool(params: FigmaGetFileParams) {
       
       const fileData = response.data;
       
-      // ファイルデータを整形して返す
+      // Format and return file data
       return {
         content: [{
           type: "text",
@@ -65,7 +65,7 @@ export async function handleGetFileTool(params: FigmaGetFileParams) {
     } catch (axiosError: any) {
       console.error(`Figma API error: ${axiosError.response?.status} ${axiosError.response?.statusText}`);
       
-      // エラーレスポンスの詳細情報を取得
+      // Get detailed error response information
       const errorDetails = axiosError.response?.data?.error || axiosError.message || 'Unknown error';
       
       return {

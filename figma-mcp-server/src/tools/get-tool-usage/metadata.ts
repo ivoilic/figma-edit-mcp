@@ -2,7 +2,7 @@ import { ToolUsageInfo } from '../../types.js';
 import { USAGE_TOOL_NAME, USAGE_TOOL_DESCRIPTION } from '../../config/index.js';
 
 /**
- * get_mcp_tool_usage ツールの使用方法情報
+ * Usage information for get_mcp_tool_usage tool
  */
 export const getToolUsageMetadata: ToolUsageInfo = {
   name: USAGE_TOOL_NAME,

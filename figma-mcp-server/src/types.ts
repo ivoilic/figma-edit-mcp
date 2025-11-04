@@ -1,11 +1,11 @@
-// プラグイン接続情報の型
+// Plugin connection information type
 export interface PluginConnection {
   pluginId: string;
   lastSeen: Date;
   status: 'connected' | 'pending';
 }
 
-// メッセージの型
+// Message type
 export interface Message {
   id: number;
   timestamp: Date;
@@ -13,7 +13,7 @@ export interface Message {
   updates: any;
 }
 
-// Figma更新パラメータの型
+// Figma update parameters type
 export interface FigmaUpdateParams {
   fileId: string;
   updates: Array<{
@@ -22,25 +22,25 @@ export interface FigmaUpdateParams {
   }>;
 }
 
-// 更新の型
+// Update type
 export interface Update {
   type: 'createFrame' | 'createText' | 'createRectangle' | 'createEllipse' | 'createLine' | 'createImage' | 'createComponent';
   data: any;
 }
 
-// バッチ更新の型
+// Batch update type
 export interface BatchUpdate {
   type: 'createFrame' | 'createText' | 'createRectangle' | 'createEllipse' | 'createLine' | 'createImage' | 'createComponent';
   data: any;
 }
 
-// プラグイン接続リクエストの型
+// Plugin connection request type
 export interface PluginHealthcheckRequest {
   pluginId: string;
   fileId: string;
 }
 
-// Figma API型定義
+// Figma API type definitions
 export type Color = {
   r: number;
   g: number;
@@ -90,7 +90,7 @@ export interface BaseNodeProps {
   visible?: boolean;
 }
 
-// フレーム作成のプロパティ型
+// Frame creation property type
 export interface CreateFrameProps extends BaseNodeProps {
   width: number;
   height: number;
@@ -105,7 +105,7 @@ export interface CreateFrameProps extends BaseNodeProps {
   itemSpacing?: number;
 }
 
-// テキスト作成のプロパティ型
+// Text creation property type
 export interface CreateTextProps extends BaseNodeProps {
   content: string;
   fontSize?: number;
@@ -121,7 +121,7 @@ export interface CreateTextProps extends BaseNodeProps {
   paragraphSpacing?: number;
 }
 
-// 矩形作成のプロパティ型
+// Rectangle creation property type
 export interface CreateRectangleProps extends BaseNodeProps {
   width: number;
   height: number;
@@ -132,21 +132,21 @@ export interface CreateRectangleProps extends BaseNodeProps {
   bottomRightRadius?: number;
 }
 
-// 楕円作成のプロパティ型
+// Ellipse creation property type
 export interface CreateEllipseProps extends BaseNodeProps {
   width: number;
   height: number;
   arcData?: { startingAngle: number; endingAngle: number; innerRadius: number };
 }
 
-// 線作成のプロパティ型
+// Line creation property type
 export interface CreateLineProps extends BaseNodeProps {
   strokeWeight: number;
   strokeCap?: 'NONE' | 'ROUND' | 'SQUARE' | 'ARROW_LINES' | 'ARROW_EQUILATERAL';
   points: { x: number; y: number }[];
 }
 
-// ベクター作成のプロパティ型
+// Vector creation property type
 export interface CreateVectorProps extends BaseNodeProps {
   vectorNetwork: {
     vertices: { x: number; y: number; strokeCap?: 'NONE' | 'ROUND' | 'SQUARE' }[];
@@ -154,7 +154,7 @@ export interface CreateVectorProps extends BaseNodeProps {
   };
 }
 
-// 画像挿入のプロパティ型
+// Image insertion property type
 export interface CreateImageProps extends BaseNodeProps {
   imageUrl: string;
   width: number;
@@ -162,19 +162,19 @@ export interface CreateImageProps extends BaseNodeProps {
   scaleMode?: 'FILL' | 'FIT' | 'CROP' | 'TILE';
 }
 
-// グループ作成のプロパティ型
+// Group creation property type
 export interface CreateGroupProps extends BaseNodeProps {
-  children: string[]; // 子要素のIDリスト
+  children: string[]; // List of child element IDs
 }
 
-// コンポーネント作成のプロパティ型
+// Component creation property type
 export interface CreateComponentProps extends BaseNodeProps {
   width: number;
   height: number;
   description?: string;
 }
 
-// Figmaファイル取得パラメータの型
+// Figma file retrieval parameters type
 export interface FigmaGetFileParams {
   fileId: string;
   includeComponents?: boolean;
@@ -183,12 +183,12 @@ export interface FigmaGetFileParams {
   depth?: number;
 }
 
-// ツール使用方法取得パラメータの型
+// Tool usage information retrieval parameters type
 export interface GetMcpToolUsageParams {
   toolName: string;
 }
 
-// ツール使用方法の型
+// Tool usage information type
 export interface ToolUsageInfo {
   name: string;
   description: string;
@@ -197,7 +197,7 @@ export interface ToolUsageInfo {
   notes?: string[];
 }
 
-// ツール使用例の型
+// Tool usage example type
 export interface ToolUsageExample {
   title: string;
   description: string;

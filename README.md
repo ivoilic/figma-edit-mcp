@@ -117,7 +117,11 @@ Replace `your_figma_personal_access_token` with your Figma Personal Access Token
 - **SECTION**: Create sections
 - And more...
 
-### Element Types That Can Be Added with update_file (Legacy)
+### Legacy Tool (No Longer Recommended)
+
+The `update_file` tool has been removed as it was redundant. Use `create_node` and `update_node` instead for maximum flexibility.
+
+#### Element Types That Were Previously Supported by update_file
 
 - **createFrame**: Create frames used as backgrounds or containers
 - **createText**: Create text elements (titles, descriptions, etc.)

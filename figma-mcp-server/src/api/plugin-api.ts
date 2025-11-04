@@ -2,10 +2,10 @@ import express from 'express';
 import { PluginHealthcheckRequest } from '../types.js';
 import { pluginConnections, getAndClearMessages, addToMessageQueue } from './message-queue.js';
 
-// プラグインAPI用のルーターを作成
+// Create router for plugin API
 export const pluginRouter = express.Router();
 
-// プラグインの接続状態を確認するエンドポイント
+// Endpoint to check plugin connection status
 pluginRouter.post('/healthcheck', (req, res) => {
   const { pluginId, fileId } = req.body as PluginHealthcheckRequest;
   if (!pluginId || !fileId) {
@@ -21,11 +21,11 @@ pluginRouter.post('/healthcheck', (req, res) => {
   res.json({ success: true });
 });
 
-// プラグインからのポーリングエンドポイント
+// Polling endpoint from plugin
 pluginRouter.get('/poll/:fileId/:pluginId', (req, res) => {
   const { fileId, pluginId } = req.params;
   
-  // 接続情報を更新
+  // Update connection info
   if (pluginConnections[fileId]) {
     pluginConnections[fileId].lastSeen = new Date();
     pluginConnections[fileId].status = 'connected';
@@ -37,7 +37,7 @@ pluginRouter.get('/poll/:fileId/:pluginId', (req, res) => {
     };
   }
   
-  // キューからメッセージを取得して返す
+  // Get and return messages from queue
   const messages = getAndClearMessages(fileId);
   
   return res.json({ messages });

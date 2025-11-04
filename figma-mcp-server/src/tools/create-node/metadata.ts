@@ -1,7 +1,7 @@
 import { ToolUsageInfo } from '../../types.js';
 
 /**
- * create_node ツールの使用方法情報
+ * Usage information for create_node tool
  */
 export const createNodeMetadata: ToolUsageInfo = {
   name: "create_node",

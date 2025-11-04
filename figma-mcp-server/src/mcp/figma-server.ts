@@ -9,8 +9,6 @@ import {
 import {
   SERVER_NAME,
   SERVER_VERSION,
-  UPDATE_FILE_TOOL_NAME,
-  UPDATE_FILE_TOOL_DESCRIPTION,
   GET_FILE_TOOL_NAME,
   GET_FILE_TOOL_DESCRIPTION,
   USAGE_TOOL_NAME,
@@ -23,7 +21,7 @@ import {
 import { getToolHandler, toolUsageRegistry } from '../tools/index.js';
 
 /**
- * Figma MCPサーバークラス
+ * Figma MCP Server class
  */
 export class FigmaServer {
   private server: Server;
@@ -44,57 +42,51 @@ export class FigmaServer {
   }
 
   /**
-   * エラーハンドリングの設定
+   * Setup error handling
    */
   private setupErrorHandling(): void {
     this.server.onerror = (error) => {
       console.error("[MCP Error]", error);
     };
 
-    // 個別のSIGINTハンドラはここでは設定せず、index.tsで一元管理
+    // Individual SIGINT handlers are not set here, managed centrally in index.ts
   }
 
   /**
-   * ハンドラーの設定
+   * Setup handlers
    */
   private setupHandlers(): void {
     this.setupToolHandlers();
   }
 
   /**
-   * ツールハンドラーの設定
+   * Setup tool handlers
    */
   private setupToolHandlers(): void {
-    // ツール一覧のハンドラー
+    // Tool list handler
     this.server.setRequestHandler(
       ListToolsRequestSchema,
       async () => ({
         tools: [
-          // create_node ツール (low-level)
+          // create_node tool (low-level)
           {
             name: CREATE_NODE_TOOL_NAME,
             description: CREATE_NODE_TOOL_DESCRIPTION,
             inputSchema: toolUsageRegistry["create_node"].inputSchema
           },
-          // update_node ツール (low-level)
+          // update_node tool (low-level)
           {
             name: UPDATE_NODE_TOOL_NAME,
             description: UPDATE_NODE_TOOL_DESCRIPTION,
             inputSchema: toolUsageRegistry["update_node"].inputSchema
           },
-          // update_file ツール (legacy, higher-level)
-          {
-            name: UPDATE_FILE_TOOL_NAME,
-            description: UPDATE_FILE_TOOL_DESCRIPTION,
-            inputSchema: toolUsageRegistry["update_file"].inputSchema
-          },
-          // get_file ツール
+          // get_file tool
           {
             name: GET_FILE_TOOL_NAME,
             description: GET_FILE_TOOL_DESCRIPTION,
             inputSchema: toolUsageRegistry["get_file"].inputSchema
           },
-          // get_mcp_tool_usage ツール
+          // get_mcp_tool_usage tool
           {
             name: USAGE_TOOL_NAME,
             description: USAGE_TOOL_DESCRIPTION,
@@ -104,7 +96,7 @@ export class FigmaServer {
       })
     );
 
-    // ツール呼び出しのハンドラー
+    // Tool call handler
     this.server.setRequestHandler(
       CallToolRequestSchema,
       async (request) => {
@@ -124,7 +116,7 @@ export class FigmaServer {
   }
 
   /**
-   * サーバーの起動
+   * Start the server
    */
   async run(): Promise<void> {
     const transport = new StdioServerTransport();
@@ -134,8 +126,8 @@ export class FigmaServer {
   }
 
   /**
-   * サーバーのシャットダウン
-   * 外部からサーバーを適切に終了するためのパブリックメソッド
+   * Shutdown the server
+   * Public method to properly shut down the server from outside
    */
   async shutdown(): Promise<void> {
     if (this.isRunning) {
@@ -146,7 +138,7 @@ export class FigmaServer {
   }
 
   /**
-   * サーバーの実行状態を取得
+   * Get server running status
    */
   isServerRunning(): boolean {
     return this.isRunning;

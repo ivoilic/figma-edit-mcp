@@ -1,7 +1,7 @@
 import { ToolUsageInfo } from '../../types.js';
 
 /**
- * update_node ツールの使用方法情報
+ * Usage information for update_node tool
  */
 export const updateNodeMetadata: ToolUsageInfo = {
   name: "update_node",

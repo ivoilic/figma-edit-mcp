@@ -2,10 +2,10 @@ import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { addToMessageQueue } from '../../api/message-queue.js';
 
 /**
- * update_node ツールのハンドラー
+ * Handler for update_node tool
  * Updates any property of an existing Figma node or deletes it
- * @param params ツールパラメータ
- * @returns ツールの実行結果
+ * @param params Tool parameters
+ * @returns Tool execution result
  */
 export async function handleUpdateNodeTool(params: {
   fileId: string;
