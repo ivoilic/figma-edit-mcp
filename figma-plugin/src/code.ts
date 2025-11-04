@@ -1,9 +1,9 @@
-// MCPサーバーとの通信設定
+// Communication settings with MCP server
 const MCP_SERVER_URL = 'http://localhost:5678';
-const POLLING_INTERVAL = 1000; // 1秒ごとにポーリング
-const DEBUG = false; // デバッグモードを無効化
+const POLLING_INTERVAL = 1000; // Poll every 1 second
+const DEBUG = false; // Disable debug mode
 
-// ログ出力関数（UIに必要なログのみ）
+// Log output function (only logs needed for UI)
 function logToUI(message: string, type: 'log' | 'error' = 'log') {
   try {
     figma.ui.postMessage({
@@ -15,39 +15,39 @@ function logToUI(message: string, type: 'log' | 'error' = 'log') {
   }
 }
 
-// プラグインの初期化
+// Initialize plugin
 figma.showUI(__html__, { width: 300, height: 400 });
 
-// フォントの読み込み状態を追跡
+// Track font loading status
 let fontsLoaded = false;
 
-// よく使用するフォントを事前に読み込む
+// Preload commonly used fonts
 Promise.all([
   figma.loadFontAsync({ family: "Inter", style: "Regular" }),
   figma.loadFontAsync({ family: "Inter", style: "Bold" })
 ]).then(() => {
   logToUI('Fonts loaded successfully');
   fontsLoaded = true;
-  // フォントの読み込みが完了したら、サーバーに接続
+  // Connect to server after fonts are loaded
   healthcheckWithServer();
 }).catch(error => {
   console.error('Error preloading fonts:', error);
   logToUI('Failed to load fonts, but attempting to connect anyway', 'error');
-  // エラーが発生しても接続は試みる
+  // Attempt to connect even if error occurs
   healthcheckWithServer();
 });
 
-// プラグインIDとファイルIDを取得
+// Get plugin ID and file ID
 const pluginId = figma.root.getPluginData('pluginId') || `plugin-${Date.now()}`;
 const fileId = figma.fileKey || `local-file-${Date.now()}`;
 
-// プラグインIDを保存
+// Save plugin ID
 figma.root.setPluginData('pluginId', pluginId);
 
-// ポーリング間隔の管理
+// Manage polling interval
 let pollingInterval: number | null = null;
 
-// ポーリングを開始する関数
+// Function to start polling
 function startPolling() {
   if (pollingInterval) {
     clearInterval(pollingInterval);
@@ -58,7 +58,7 @@ function startPolling() {
   }, POLLING_INTERVAL) as unknown as number;
 }
 
-// MCPサーバーにプラグインを登録
+// Register plugin with MCP server
 async function healthcheckWithServer() {
   try {
     logToUI('Connecting to MCP server...');
@@ -81,7 +81,7 @@ async function healthcheckWithServer() {
     logToUI(`Connected to MCP server (File ID: ${fileId})`);
     figma.ui.postMessage({ type: 'connection-success', fileId });
     
-    // 接続成功後、ポーリングを開始
+    // Start polling after successful connection
     startPolling();
   } catch (error: unknown) {
     console.error('Failed to connect to MCP server:', error);
@@ -91,7 +91,7 @@ async function healthcheckWithServer() {
   }
 }
 
-// MCPサーバーからメッセージをポーリング
+// Poll for messages from MCP server
 async function pollForMessages() {
   try {
     const response = await fetch(`${MCP_SERVER_URL}/plugin/poll/${fileId}/${pluginId}`);
@@ -102,11 +102,11 @@ async function pollForMessages() {
     
     const data = await response.json();
     if (data && data.messages && data.messages.length > 0) {
-      // 各メッセージを処理
+      // Process each message
       for (const message of data.messages) {
         if (message.type === 'update') {
           try {
-            // 更新を適用
+            // Apply updates
             await applyUpdates(message.updates);
           } catch (error) {
             console.error('Error applying updates:', error);
@@ -129,22 +129,44 @@ async function applyUpdates(updates: any) {
       // 各更新を処理
       for (const update of updates.updates) {
         const { type, data } = update;
-        if (!type || !data) continue;
+        if (!type) continue;
         
-        // 一時的なupdatesオブジェクトを作成
-        const tempUpdates = { [type]: data };
-        await processUpdates(tempUpdates);
+        // 新しい低レベル操作を処理
+        if (type === 'createNode') {
+          await createNode(data);
+        } else if (type === 'updateNode') {
+          await updateNode(data);
+        } else if (type === 'deleteNode') {
+          await deleteNode(data);
+        } else {
+          // 旧形式の更新（互換性のため）
+          if (data) {
+            const tempUpdates = { [type]: data };
+            await processUpdates(tempUpdates);
+          }
+        }
       }
     } else if (Array.isArray(updates)) {
       // 配列形式の場合（互換性のため）
       // 各更新を処理
       for (const update of updates) {
         const { type, data } = update;
-        if (!type || !data) continue;
+        if (!type) continue;
         
-        // 一時的なupdatesオブジェクトを作成
-        const tempUpdates = { [type]: data };
-        await processUpdates(tempUpdates);
+        // 新しい低レベル操作を処理
+        if (type === 'createNode') {
+          await createNode(data);
+        } else if (type === 'updateNode') {
+          await updateNode(data);
+        } else if (type === 'deleteNode') {
+          await deleteNode(data);
+        } else {
+          // 旧形式の更新（互換性のため）
+          if (data) {
+            const tempUpdates = { [type]: data };
+            await processUpdates(tempUpdates);
+          }
+        }
       }
     } else {
       // 旧形式の更新（互換性のため）
@@ -161,9 +183,9 @@ async function applyUpdates(updates: any) {
   }
 }
 
-// 更新を処理する関数
+// Function to process updates
 async function processUpdates(updates: any) {
-  // フレーム作成
+  // Create frame
   if (updates.createFrame) {
     const { name, width, height, fills, x, y, cornerRadius, layoutMode, primaryAxisSizingMode, 
       counterAxisSizingMode, paddingLeft, paddingRight, paddingTop, paddingBottom, itemSpacing,
@@ -798,7 +820,524 @@ function createComponentElement(componentData: {
   return component;
 }
 
-// UIからのメッセージを処理
+// Low-level: Create any node type
+async function createNode(data: {
+  nodeType: string;
+  properties: Record<string, any>;
+  parentId?: string;
+}) {
+  const { nodeType, properties, parentId } = data;
+  
+  let node: SceneNode;
+  
+  // Create based on node type
+  switch (nodeType.toUpperCase()) {
+    case 'FRAME':
+      node = figma.createFrame();
+      break;
+    case 'TEXT':
+      node = figma.createText();
+      // For text nodes, characters must be set
+      if (properties.characters !== undefined) {
+        // Font must be loaded
+        const fontFamily = properties.fontName?.family || 'Inter';
+        const fontStyle = properties.fontName?.style || properties.fontWeight || 'Regular';
+        try {
+          await figma.loadFontAsync({ family: fontFamily, style: fontStyle });
+          (node as TextNode).characters = properties.characters;
+        } catch (e) {
+          console.error('Error loading font:', e);
+          // Try default font
+          try {
+            await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+            (node as TextNode).characters = properties.characters;
+          } catch (e2) {
+            console.error('Error loading default font:', e2);
+            throw new Error(`Failed to load font: ${fontFamily} ${fontStyle}`);
+          }
+        }
+      }
+      break;
+    case 'RECTANGLE':
+      node = figma.createRectangle();
+      break;
+    case 'ELLIPSE':
+      node = figma.createEllipse();
+      break;
+    case 'LINE':
+      node = figma.createLine();
+      break;
+    case 'VECTOR':
+      node = figma.createVector();
+      break;
+    case 'STAR':
+      node = figma.createStar();
+      break;
+    case 'POLYGON':
+      node = figma.createPolygon();
+      break;
+    case 'GROUP':
+      node = figma.createGroup([], figma.currentPage);
+      break;
+    case 'COMPONENT':
+      node = figma.createComponent();
+      break;
+    case 'COMPONENT_SET':
+      node = figma.createComponentSet();
+      break;
+    case 'SECTION':
+      node = figma.createSection();
+      break;
+    default:
+      throw new Error(`Unsupported node type: ${nodeType}`);
+  }
+  
+  // Apply properties
+  applyPropertiesToNode(node, properties);
+  
+  // Set parent node
+  let parent: BaseNode = figma.currentPage;
+  if (parentId) {
+    const foundParent = findNodeById(parentId);
+    if (foundParent && 'appendChild' in foundParent) {
+      parent = foundParent as ChildrenMixin;
+    }
+  }
+  
+  if (parent !== node.parent) {
+    parent.appendChild(node);
+  }
+  
+  // Move viewport to new node
+  figma.viewport.scrollAndZoomIntoView([node]);
+}
+
+// Low-level: Update node properties
+async function updateNode(data: {
+  nodeId: string;
+  properties?: Record<string, any>;
+  parentId?: string;
+  index?: number;
+}) {
+  const { nodeId, properties, parentId, index } = data;
+  
+  const node = findNodeById(nodeId);
+  if (!node) {
+    throw new Error(`Node with id ${nodeId} not found`);
+  }
+  
+  // Change parent node if needed
+  if (parentId !== undefined) {
+    const newParent = findNodeById(parentId);
+    if (newParent && 'appendChild' in newParent) {
+      const parent = newParent as ChildrenMixin;
+      if (index !== undefined) {
+        parent.insertChild(index, node);
+      } else {
+        parent.appendChild(node);
+      }
+    }
+  }
+  
+  // Update properties
+  if (properties) {
+    applyPropertiesToNode(node, properties);
+  }
+}
+
+// Low-level: Delete node
+function deleteNode(data: { nodeId: string }) {
+  const { nodeId } = data;
+  
+  const node = findNodeById(nodeId);
+  if (!node) {
+    throw new Error(`Node with id ${nodeId} not found`);
+  }
+  
+  node.remove();
+}
+
+// Search for node by ID (recursive, search all pages)
+function findNodeById(nodeId: string): SceneNode | null {
+  function search(node: BaseNode): SceneNode | null {
+    // Directly compare node IDs (supports both Figma REST API ID format and plugin API ID format)
+    if (node.id === nodeId && 'type' in node) {
+      return node as SceneNode;
+    }
+    
+    // Search nodes with children
+    if ('children' in node) {
+      for (const child of node.children) {
+        const found = search(child);
+        if (found) return found;
+      }
+    }
+    
+    return null;
+  }
+  
+  // First search root (usually DocumentNode)
+  const rootResult = search(figma.root);
+  if (rootResult) return rootResult;
+  
+  // Search all pages
+  for (const page of figma.root.children) {
+    const pageResult = search(page);
+    if (pageResult) return pageResult;
+  }
+  
+  return null;
+}
+
+// Generic function to apply properties to node
+function applyPropertiesToNode(node: SceneNode, properties: Record<string, any>) {
+  // Basic properties
+  if (properties.name !== undefined) node.name = properties.name;
+  if (properties.x !== undefined) node.x = properties.x;
+  if (properties.y !== undefined) node.y = properties.y;
+  if (properties.opacity !== undefined) node.opacity = properties.opacity;
+  if (properties.visible !== undefined) node.visible = properties.visible;
+  if (properties.blendMode !== undefined) node.blendMode = properties.blendMode;
+  
+  // Layout-capable nodes
+  if ('resize' in node) {
+    const layoutNode = node as LayoutMixin;
+    if (properties.width !== undefined || properties.height !== undefined) {
+      const width = properties.width !== undefined ? properties.width : layoutNode.width;
+      const height = properties.height !== undefined ? properties.height : layoutNode.height;
+      layoutNode.resize(width, height);
+    }
+  }
+  
+  // Fills and strokes (support variables)
+  if ('fills' in node) {
+    const paintNode = node as GeometryMixin;
+    if (properties.fills !== undefined) {
+      try {
+        // Support variable references in fills
+        const fills = properties.fills.map((fill: any) => {
+          if (fill.type === 'VARIABLE' && fill.variableId) {
+            // Convert variable reference to variable paint
+            const variable = figma.variables.getVariableById(fill.variableId);
+            if (variable) {
+              return {
+                type: 'VARIABLE',
+                variableId: fill.variableId,
+                resolvedType: variable.resolvedType
+              } as VariablePaint;
+            }
+          }
+          return fill;
+        });
+        paintNode.fills = fills as Paint[];
+      } catch (e) {
+        console.error('Error setting fills:', e);
+      }
+    }
+    if (properties.strokes !== undefined) {
+      try {
+        // Support variable references in strokes
+        const strokes = properties.strokes.map((stroke: any) => {
+          if (stroke.type === 'VARIABLE' && stroke.variableId) {
+            const variable = figma.variables.getVariableById(stroke.variableId);
+            if (variable) {
+              return {
+                type: 'VARIABLE',
+                variableId: stroke.variableId,
+                resolvedType: variable.resolvedType
+              } as VariablePaint;
+            }
+          }
+          return stroke;
+        });
+        paintNode.strokes = strokes as Paint[];
+      } catch (e) {
+        console.error('Error setting strokes:', e);
+      }
+    }
+    if (properties.strokeWeight !== undefined) paintNode.strokeWeight = properties.strokeWeight;
+    if (properties.strokeAlign !== undefined) paintNode.strokeAlign = properties.strokeAlign;
+    if (properties.strokeCap !== undefined && 'strokeCap' in paintNode) {
+      (paintNode as any).strokeCap = properties.strokeCap;
+    }
+    if (properties.strokeJoin !== undefined && 'strokeJoin' in paintNode) {
+      (paintNode as any).strokeJoin = properties.strokeJoin;
+    }
+  }
+  
+  // Corner radius
+  if ('cornerRadius' in node) {
+    const cornerNode = node as CornerMixin;
+    if (properties.cornerRadius !== undefined) cornerNode.cornerRadius = properties.cornerRadius;
+    if (properties.topLeftRadius !== undefined) cornerNode.topLeftRadius = properties.topLeftRadius;
+    if (properties.topRightRadius !== undefined) cornerNode.topRightRadius = properties.topRightRadius;
+    if (properties.bottomLeftRadius !== undefined) cornerNode.bottomLeftRadius = properties.bottomLeftRadius;
+    if (properties.bottomRightRadius !== undefined) cornerNode.bottomRightRadius = properties.bottomRightRadius;
+  }
+  
+  // Effects
+  if ('effects' in node) {
+    const effectNode = node as EffectMixin;
+    if (properties.effects !== undefined) {
+      try {
+        effectNode.effects = properties.effects as Effect[];
+      } catch (e) {
+        console.error('Error setting effects:', e);
+      }
+    }
+  }
+  
+  // Text node specific properties
+  if (node.type === 'TEXT') {
+    const textNode = node as TextNode;
+    if (properties.characters !== undefined) {
+      textNode.characters = properties.characters;
+    }
+    if (properties.fontSize !== undefined) textNode.fontSize = properties.fontSize;
+    if (properties.fontName !== undefined) {
+      const fontName = properties.fontName;
+      textNode.fontName = { family: fontName.family, style: fontName.style };
+    } else if (properties.fontWeight !== undefined) {
+      // If only fontWeight is specified, use current font family
+      const currentFont = textNode.fontName;
+      textNode.fontName = { family: currentFont.family, style: properties.fontWeight };
+    }
+    if (properties.letterSpacing !== undefined) textNode.letterSpacing = properties.letterSpacing;
+    if (properties.lineHeight !== undefined) {
+      if (typeof properties.lineHeight === 'object') {
+        textNode.lineHeight = properties.lineHeight;
+      } else {
+        textNode.lineHeight = { value: properties.lineHeight, unit: 'PIXELS' };
+      }
+    }
+    if (properties.textAlignHorizontal !== undefined) textNode.textAlignHorizontal = properties.textAlignHorizontal;
+    if (properties.textAlignVertical !== undefined) textNode.textAlignVertical = properties.textAlignVertical;
+    if (properties.textCase !== undefined) textNode.textCase = properties.textCase;
+    if (properties.textDecoration !== undefined) textNode.textDecoration = properties.textDecoration;
+    if (properties.paragraphIndent !== undefined) textNode.paragraphIndent = properties.paragraphIndent;
+    if (properties.paragraphSpacing !== undefined) textNode.paragraphSpacing = properties.paragraphSpacing;
+    if (properties.textAutoResize !== undefined) textNode.textAutoResize = properties.textAutoResize;
+  }
+  
+  // Frame node specific properties
+  if (node.type === 'FRAME') {
+    const frameNode = node as FrameNode;
+    if (properties.layoutMode !== undefined) frameNode.layoutMode = properties.layoutMode;
+    if (properties.primaryAxisSizingMode !== undefined) frameNode.primaryAxisSizingMode = properties.primaryAxisSizingMode;
+    if (properties.counterAxisSizingMode !== undefined) frameNode.counterAxisSizingMode = properties.counterAxisSizingMode;
+    if (properties.paddingLeft !== undefined) frameNode.paddingLeft = properties.paddingLeft;
+    if (properties.paddingRight !== undefined) frameNode.paddingRight = properties.paddingRight;
+    if (properties.paddingTop !== undefined) frameNode.paddingTop = properties.paddingTop;
+    if (properties.paddingBottom !== undefined) frameNode.paddingBottom = properties.paddingBottom;
+    if (properties.itemSpacing !== undefined) frameNode.itemSpacing = properties.itemSpacing;
+  }
+  
+  // Ellipse node specific properties
+  if (node.type === 'ELLIPSE') {
+    const ellipseNode = node as EllipseNode;
+    if (properties.arcData !== undefined) ellipseNode.arcData = properties.arcData;
+  }
+  
+  // Line node specific properties
+  if (node.type === 'LINE') {
+    const lineNode = node as LineNode;
+    // strokeCap is already handled above
+  }
+  
+  // Vector node specific properties
+  if (node.type === 'VECTOR') {
+    const vectorNode = node as VectorNode;
+    if (properties.vectorNetwork !== undefined) vectorNode.vectorNetwork = properties.vectorNetwork;
+  }
+  
+  // Component node specific properties
+  if (node.type === 'COMPONENT') {
+    const componentNode = node as ComponentNode;
+    if (properties.description !== undefined) componentNode.description = properties.description;
+  }
+}
+
+// Get all variables from the file
+async function getVariables() {
+  try {
+    const variables = figma.variables.getLocalVariables();
+    const collections = figma.variables.getLocalVariableCollections();
+    
+    const result = {
+      variables: variables.map(v => ({
+        id: v.id,
+        name: v.name,
+        type: v.resolvedType,
+        valuesByMode: v.valuesByMode,
+        scopes: v.scopes,
+        description: v.description || '',
+        hiddenFromPublishing: v.hiddenFromPublishing
+      })),
+      collections: collections.map(c => ({
+        id: c.id,
+        name: c.name,
+        modes: c.modes,
+        variableIds: c.variableIds
+      }))
+    };
+    
+    logToUI(`Retrieved ${variables.length} variables and ${collections.length} collections`);
+    figma.notify(`Retrieved ${variables.length} variables`);
+    
+    // Send variables back to server (could be enhanced to return via API)
+    console.log('Variables:', JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error('Error getting variables:', error);
+    logToUI(`Error getting variables: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error getting variables', { error: true });
+  }
+}
+
+// Create a new variable
+async function createVariable(data: {
+  name: string;
+  variableType: 'COLOR' | 'FLOAT' | 'STRING' | 'BOOLEAN';
+  valuesByMode: Record<string, any>;
+  collectionId?: string;
+  description?: string;
+  scopes?: Array<'ALL_SCOPES' | 'TEXT_COLOR' | 'BG_COLOR' | 'FILL_COLOR' | 'STROKE_COLOR' | 'EFFECT_COLOR' | 'OPACITY' | 'FONT_FAMILY' | 'FONT_SIZE' | 'FONT_WEIGHT' | 'LINE_HEIGHT' | 'LETTER_SPACING' | 'PARAGRAPH_SPACING' | 'PARAGRAPH_INDENT' | 'BORDER_RADIUS' | 'SPACING' | 'DIMENSION' | 'GAP' | 'SIZING_WIDTH' | 'SIZING_HEIGHT'>;
+}) {
+  try {
+    const { name, variableType, valuesByMode, collectionId, description, scopes } = data;
+    
+    // Get or create collection
+    let collection: VariableCollection;
+    if (collectionId) {
+      const collections = figma.variables.getLocalVariableCollections();
+      collection = collections.find(c => c.id === collectionId) || null;
+      if (!collection) {
+        throw new Error(`Collection with id ${collectionId} not found`);
+      }
+    } else {
+      // Use existing collection or create default
+      const collections = figma.variables.getLocalVariableCollections();
+      collection = collections.length > 0 ? collections[0] : figma.variables.createVariableCollection('Default');
+    }
+    
+    // Get first mode ID for variable creation
+    const firstModeId = collection.modes[0]?.modeId;
+    if (!firstModeId) {
+      throw new Error('Collection must have at least one mode');
+    }
+    
+    // Get first value for initial creation
+    const firstValue = valuesByMode[firstModeId];
+    if (firstValue === undefined) {
+      // Try to get any value from valuesByMode
+      const anyValue = Object.values(valuesByMode)[0];
+      if (anyValue === undefined) {
+        throw new Error('At least one value must be provided');
+      }
+    }
+    
+    // Create variable with first mode value
+    const variable = figma.variables.createVariable(name, collection, variableType);
+    
+    // Set values for all modes
+    for (const [modeId, value] of Object.entries(valuesByMode)) {
+      // Verify mode exists in collection
+      const modeExists = collection.modes.some(m => m.modeId === modeId);
+      if (modeExists) {
+        variable.setValueForMode(modeId, value);
+      } else {
+        console.warn(`Mode ${modeId} not found in collection, skipping`);
+      }
+    }
+    
+    // Set description
+    if (description) {
+      variable.description = description;
+    }
+    
+    // Set scopes
+    if (scopes && scopes.length > 0) {
+      variable.scopes = scopes;
+    }
+    
+    logToUI(`Created variable: ${name}`);
+    figma.notify(`Created variable: ${name}`);
+  } catch (error) {
+    console.error('Error creating variable:', error);
+    logToUI(`Error creating variable: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error creating variable', { error: true });
+  }
+}
+
+// Update an existing variable
+async function updateVariable(data: {
+  variableId: string;
+  name?: string;
+  valuesByMode?: Record<string, any>;
+  description?: string;
+  scopes?: Array<'ALL_SCOPES' | 'TEXT_COLOR' | 'BG_COLOR' | 'FILL_COLOR' | 'STROKE_COLOR' | 'EFFECT_COLOR' | 'OPACITY' | 'FONT_FAMILY' | 'FONT_SIZE' | 'FONT_WEIGHT' | 'LINE_HEIGHT' | 'LETTER_SPACING' | 'PARAGRAPH_SPACING' | 'PARAGRAPH_INDENT' | 'BORDER_RADIUS' | 'SPACING' | 'DIMENSION' | 'GAP' | 'SIZING_WIDTH' | 'SIZING_HEIGHT'>;
+}) {
+  try {
+    const { variableId, name, valuesByMode, description, scopes } = data;
+    
+    const variable = figma.variables.getVariableById(variableId);
+    if (!variable) {
+      throw new Error(`Variable with id ${variableId} not found`);
+    }
+    
+    // Update name
+    if (name !== undefined) {
+      variable.name = name;
+    }
+    
+    // Update values by mode
+    if (valuesByMode) {
+      for (const [modeId, value] of Object.entries(valuesByMode)) {
+        variable.setValueForMode(modeId, value);
+      }
+    }
+    
+    // Update description
+    if (description !== undefined) {
+      variable.description = description;
+    }
+    
+    // Update scopes
+    if (scopes !== undefined) {
+      variable.scopes = scopes;
+    }
+    
+    logToUI(`Updated variable: ${variable.name}`);
+    figma.notify(`Updated variable: ${variable.name}`);
+  } catch (error) {
+    console.error('Error updating variable:', error);
+    logToUI(`Error updating variable: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error updating variable', { error: true });
+  }
+}
+
+// Delete a variable
+async function deleteVariable(data: { variableId: string }) {
+  try {
+    const { variableId } = data;
+    
+    const variable = figma.variables.getVariableById(variableId);
+    if (!variable) {
+      throw new Error(`Variable with id ${variableId} not found`);
+    }
+    
+    const variableName = variable.name;
+    variable.remove();
+    
+    logToUI(`Deleted variable: ${variableName}`);
+    figma.notify(`Deleted variable: ${variableName}`);
+  } catch (error) {
+    console.error('Error deleting variable:', error);
+    logToUI(`Error deleting variable: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    figma.notify('Error deleting variable', { error: true });
+  }
+}
+
+// Handle messages from UI
 figma.ui.onmessage = (msg) => {
   if (msg.type === 'register') {
     healthcheckWithServer();

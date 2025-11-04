@@ -1,25 +1,25 @@
 import { Message, PluginConnection } from '../types.js';
 
-// プラグインからの接続を管理
+// Manage connections from plugins
 export const pluginConnections: Record<string, PluginConnection> = {};
 
-// ファイルごとのメッセージキュー
+// Message queue per file
 export const messageQueues: Record<string, Message[]> = {};
 
 /**
- * メッセージキューにメッセージを追加する
- * @param fileId Figmaファイルのid
- * @param updates 更新内容
- * @returns 成功したかどうか
+ * Add message to message queue
+ * @param fileId Figma file ID
+ * @param updates Update content
+ * @returns Whether successful
  */
 export function addToMessageQueue(fileId: string, updates: any): boolean {
   try {
-    // プラグインが接続されているか確認
+    // Check if plugin is connected
     if (!pluginConnections[fileId]) {
-      // 接続がない場合でもキューを作成しておく（後でプラグインが接続する可能性がある）
+      // Create queue even if no connection (plugin may connect later)
       console.error(`Warning: No plugin currently connected for file ${fileId}, but will queue message anyway`);
       
-      // 接続情報を仮作成
+      // Create temporary connection info
       pluginConnections[fileId] = {
         pluginId: 'pending-connection',
         lastSeen: new Date(),
@@ -27,7 +27,7 @@ export function addToMessageQueue(fileId: string, updates: any): boolean {
       };
     }
     
-    // メッセージをキューに追加
+    // Add message to queue
     if (!messageQueues[fileId]) {
       messageQueues[fileId] = [];
     }
@@ -49,15 +49,15 @@ export function addToMessageQueue(fileId: string, updates: any): boolean {
 }
 
 /**
- * メッセージキューからメッセージを取得して削除する
- * @param fileId Figmaファイルのid
- * @returns メッセージの配列
+ * Get and remove messages from message queue
+ * @param fileId Figma file ID
+ * @returns Array of messages
  */
 export function getAndClearMessages(fileId: string): Message[] {
   const messages = messageQueues[fileId] || [];
   
   if (messages.length > 0) {
-    // メッセージを返した後、キューをクリア
+    // Clear queue after returning messages
     messageQueues[fileId] = [];
   }
   

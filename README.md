@@ -90,11 +90,65 @@ Replace `your_figma_personal_access_token` with your Figma Personal Access Token
 
 ### Tools
 
-- **update_file**: Tool to add and update elements in a Figma file
-- **get_file**: Tool to retrieve the contents of a Figma file
+#### Low-Level Tools (Recommended for AI)
+
+- **create_node**: Create any Figma node type with any properties. Provides maximum flexibility for creating nodes at the lowest level. Supports using variables in properties.
+- **update_node**: Update any property of an existing Figma node or delete it. Provides maximum flexibility for modifying nodes at the lowest level. Supports using variables in properties.
+- **get_variables**: Retrieve all variables from a Figma file. Variables are reusable design tokens.
+- **create_variable**: Create a new variable in a Figma file. Supports COLOR, FLOAT, STRING, and BOOLEAN types.
+- **update_variable**: Update an existing variable (name, values, description, scopes).
+- **delete_variable**: Delete a variable from a Figma file.
+
+#### Higher-Level Tools
+
+- **update_file**: Tool to add and update elements in a Figma file (legacy, higher-level API)
+- **get_file**: Tool to retrieve the contents of a Figma file (including node IDs for use with update_node)
 - **get_mcp_tool_usage**: Tool to get usage information for MCP tools
 
-### Element Types That Can Be Added with update_file
+### Variable Tools
+
+- **get_variables**: Retrieve all variables from a Figma file
+- **create_variable**: Create a new variable (COLOR, FLOAT, STRING, or BOOLEAN type)
+- **update_variable**: Update an existing variable's properties
+- **delete_variable**: Delete a variable from a file
+
+### Using Variables in Nodes
+
+Variables can be used in node properties like fills and strokes. Use the following format:
+```json
+{
+  "fills": [
+    {
+      "type": "VARIABLE",
+      "variableId": "VARIABLE_ID"
+    }
+  ]
+}
+```
+
+Get variable IDs using the `get_variables` tool.
+
+### Supported Node Types (create_node)
+
+- **FRAME**: Create frames used as backgrounds or containers
+- **TEXT**: Create text elements (titles, descriptions, etc.)
+- **RECTANGLE**: Create rectangles (buttons, cards, etc.)
+- **ELLIPSE**: Create ellipses (icons, decorations, etc.)
+- **LINE**: Create lines (dividers, arrows, etc.)
+- **VECTOR**: Create vector shapes
+- **STAR**: Create star shapes
+- **POLYGON**: Create polygon shapes
+- **GROUP**: Create groups
+- **COMPONENT**: Create reusable components
+- **COMPONENT_SET**: Create component sets
+- **SECTION**: Create sections
+- And more...
+
+### Legacy Tool (No Longer Recommended)
+
+The `update_file` tool has been removed as it was redundant. Use `create_node` and `update_node` instead for maximum flexibility.
+
+#### Element Types That Were Previously Supported by update_file
 
 - **createFrame**: Create frames used as backgrounds or containers
 - **createText**: Create text elements (titles, descriptions, etc.)
