@@ -6,6 +6,7 @@ Add text, shapes, frames, and more through MCP.
 ## Requirements
 
 - Node.js v20.0.0 or higher
+- pnpm v8.0.0 or higher
 
 ## Installation
 
@@ -21,12 +22,20 @@ cd figma-edit-mcp
 2. **Install Dependencies**
 
 ```bash
-npm run install-all
+pnpm install
 ```
 
-This command installs dependencies and runs the build in both the figma-mcp-server and figma-plugin directories.
+This command installs dependencies for all workspaces.
 
-3. **Install the Figma Plugin**
+3. **Build the Project**
+
+```bash
+pnpm build
+```
+
+This command builds both the figma-mcp-server and figma-plugin workspaces.
+
+4. **Install the Figma Plugin**
 
 To install the Figma plugin locally in development mode:
 
@@ -99,9 +108,8 @@ Replace `your_figma_personal_access_token` with your Figma Personal Access Token
 - **update_variable**: Update an existing variable (name, values, description, scopes).
 - **delete_variable**: Delete a variable from a Figma file.
 
-#### Higher-Level Tools
+#### File and Information Tools
 
-- **update_file**: Tool to add and update elements in a Figma file (legacy, higher-level API)
 - **get_file**: Tool to retrieve the contents of a Figma file (including node IDs for use with update_node)
 - **get_mcp_tool_usage**: Tool to get usage information for MCP tools
 
@@ -144,16 +152,3 @@ Get variable IDs using the `get_variables` tool.
 - **SECTION**: Create sections
 - And more...
 
-### Legacy Tool (No Longer Recommended)
-
-The `update_file` tool has been removed as it was redundant. Use `create_node` and `update_node` instead for maximum flexibility.
-
-#### Element Types That Were Previously Supported by update_file
-
-- **createFrame**: Create frames used as backgrounds or containers
-- **createText**: Create text elements (titles, descriptions, etc.)
-- **createRectangle**: Create rectangles (buttons, cards, etc.)
-- **createEllipse**: Create ellipses (icons, decorations, etc.)
-- **createLine**: Create lines (dividers, arrows, etc.)
-- **createImage**: Insert images (logos, characters, etc.)
-- **createComponent**: Create reusable components

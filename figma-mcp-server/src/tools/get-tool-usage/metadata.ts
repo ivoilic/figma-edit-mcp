@@ -19,14 +19,14 @@ export const getToolUsageMetadata: ToolUsageInfo = {
   },
   examples: [
     {
-      title: "Getting Usage Information for the update_file Tool",
-      description: "Example of retrieving detailed usage information for the update_file tool",
+      title: "Getting Usage Information for the create_node Tool",
+      description: "Example of retrieving detailed usage information for the create_node tool",
       code: `<use_mcp_tool>
 <server_name>figma-mcp-server</server_name>
 <tool_name>get_mcp_tool_usage</tool_name>
 <arguments>
 {
-  "toolName": "update_file"
+  "toolName": "create_node"
 }
 </arguments>
 </use_mcp_tool>`

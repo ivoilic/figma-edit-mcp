@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "Figma Edit MCP",
   "scripts": {
-    "install-all": "cd figma-mcp-server && npm install && npm run build && cd ../figma-plugin && npm install && npm run build"
+    "build": "pnpm --filter figma-mcp-server build && pnpm --filter figma-plugin build",
+    "install-all": "pnpm install"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
   },
   "author": "",
   "license": "ISC"
