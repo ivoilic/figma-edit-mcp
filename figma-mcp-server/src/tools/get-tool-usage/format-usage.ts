@@ -1,9 +1,9 @@
 import { ToolUsageInfo } from '../../types.js';
 
 /**
- * ツールの使用方法情報をフォーマットする
- * @param toolUsageInfo ツールの使用方法情報
- * @returns フォーマットされた使用方法情報
+ * Format tool usage information
+ * @param toolUsageInfo Tool usage information
+ * @returns Formatted usage information
  */
 export function formatToolUsageInfo(toolUsageInfo: ToolUsageInfo): string {
   let result = `# ${toolUsageInfo.name}\n\n`;

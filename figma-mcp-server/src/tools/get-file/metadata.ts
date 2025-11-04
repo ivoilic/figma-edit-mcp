@@ -2,7 +2,7 @@ import { ToolUsageInfo } from '../../types.js';
 import { GET_FILE_TOOL_NAME, GET_FILE_TOOL_DESCRIPTION } from '../../config/index.js';
 
 /**
- * get_file ツールの使用方法情報
+ * Usage information for get_file tool
  */
 export const getFileMetadata: ToolUsageInfo = {
   name: GET_FILE_TOOL_NAME,

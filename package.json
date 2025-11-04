@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "description": "Figma Edit MCP",
   "scripts": {
-    "install-all": "cd figma-mcp-server && npm install && npm run build && cd ../figma-plugin && npm install && npm run build"
+    "build": "pnpm build:server && pnpm build:plugin",
+    "build:server": "pnpm --filter figma-mcp-server build",
+    "build:plugin": "pnpm --filter figma-mcp-plugin build",
+    "start:server": "pnpm --filter figma-mcp-server start"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
   },
-  "author": "",
+  "author": "Ivo Ilić <hello@ivoilic.com>",
   "license": "ISC"
 }

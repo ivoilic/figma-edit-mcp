@@ -3,15 +3,15 @@ import { getToolUsageInfo } from '../tool-registry.js';
 import { formatToolUsageInfo } from './format-usage.js';
 
 /**
- * get_mcp_tool_usage ツールのハンドラー
- * @param params ツールパラメータ
- * @returns ツールの実行結果
+ * Handler for get_mcp_tool_usage tool
+ * @param params Tool parameters
+ * @returns Tool execution result
  */
 export async function handleGetToolUsageTool(params: GetMcpToolUsageParams) {
   try {
     const { toolName } = params;
     
-    // ツールの使用方法情報を取得
+    // Get tool usage information
     const toolUsageInfo = getToolUsageInfo(toolName);
     
     if (!toolUsageInfo) {
@@ -24,7 +24,7 @@ export async function handleGetToolUsageTool(params: GetMcpToolUsageParams) {
       };
     }
     
-    // 使用方法情報をフォーマットして返す
+    // Format and return usage information
     const formattedUsage = formatToolUsageInfo(toolUsageInfo);
     
     return {

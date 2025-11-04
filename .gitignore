@@ -2,9 +2,7 @@
 node_modules/
 
 # Build artifacts
-figma-plugin/code.js
-figma-plugin/src/code.js
-figma-plugin/ui.html
-figma-plugin/src/ui.js
+figma-mcp-plugin/build/
 figma-mcp-server/build/
 figma-mcp-server/.figma-mcp-server.pid
+.env
