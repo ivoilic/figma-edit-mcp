@@ -12,6 +12,13 @@ export const pluginConnections: Record<string, WebSocketConnection> = {};
 // Message queue per file (for messages sent before connection)
 export const messageQueues: Record<string, Message[]> = {};
 
+// Variable cache per file (stores variables retrieved from plugins)
+export const variableCache: Record<string, {
+  variables: any[];
+  collections: any[];
+  timestamp: Date;
+}> = {};
+
 /**
  * Register WebSocket connection for a file
  * @param fileId Figma file ID
@@ -118,4 +125,67 @@ export function getAndClearMessages(fileId: string): Message[] {
   }
 
   return messages;
+}
+
+/**
+ * Store variables for a file
+ * @param fileId Figma file ID
+ * @param variables Variables data
+ */
+export function storeVariables(fileId: string, variables: any, collections: any): void {
+  console.error(`[storeVariables] Storing ${variables?.length || 0} variables for file ${fileId}`);
+  variableCache[fileId] = {
+    variables: variables || [],
+    collections: collections || [],
+    timestamp: new Date()
+  };
+  console.error(`[storeVariables] Cache updated. Variables:`, variables?.map((v: any) => ({ id: v.id, name: v.name })));
+}
+
+/**
+ * Get cached variables for a file
+ * @param fileId Figma file ID
+ * @returns Variables data or null if not cached
+ */
+export function getCachedVariables(fileId: string): { variables: any[]; collections: any[] } | null {
+  const cached = variableCache[fileId];
+  if (cached) {
+    // Cache is valid for 5 minutes
+    const cacheAge = Date.now() - cached.timestamp.getTime();
+    if (cacheAge < 5 * 60 * 1000) {
+      console.error(`[getCachedVariables] Returning cached variables for ${fileId}: ${cached.variables.length} variables`);
+      return {
+        variables: cached.variables,
+        collections: cached.collections
+      };
+    } else {
+      console.error(`[getCachedVariables] Cache expired for ${fileId}`);
+      delete variableCache[fileId];
+    }
+  } else {
+    console.error(`[getCachedVariables] No cache found for ${fileId}`);
+  }
+  return null;
+}
+
+/**
+ * Clear variables cache for a file
+ * @param fileId Figma file ID
+ */
+export function clearVariablesCache(fileId: string): void {
+  delete variableCache[fileId];
+}
+
+/**
+ * Get all cached fileIds (for debugging)
+ */
+export function getCachedFileIds(): string[] {
+  return Object.keys(variableCache);
+}
+
+/**
+ * Check if cache exists for a file (even if empty)
+ */
+export function hasCache(fileId: string): boolean {
+  return fileId in variableCache;
 }

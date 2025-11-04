@@ -1,8 +1,9 @@
-# Figma Edit MCP
+# Figma Edit MCP 🛠️🎨
 
 A tool for editing Figma files via MCP.
-Add text, shapes, frames, and more through MCP.
-
+```
+⚠️ This is a prototype! Use at your own risk! ⚠️
+```
 ## Requirements
 
 - Node.js v20.0.0 or higher
@@ -31,11 +32,13 @@ This command installs dependencies for all workspaces.
 
 ```bash
 pnpm build
+# or
+pnpm build:server
+# and
+pnpm build:plugin
 ```
 
-This command builds both the figma-mcp-server and figma-plugin workspaces.
-
-4. **Install the Figma Plugin**
+1. **Install the Figma Plugin**
 
 To install the Figma plugin locally in development mode:
 
@@ -48,18 +51,26 @@ To install the Figma plugin locally in development mode:
 
 #### For Cursor
 
-To use this plugin with Cursor, you need to add the MCP server configuration:
+To use this plugin with Cursor, you need to add the MCP server configuration to your MCP settings file (typically `~/.cursor/mcp.json` or similar).
 
-1. Click "Add MCP Server"
-2. Select "command" for "Type"
-3. Enter the following for "Command":
+**Note:** You can currently only have this enabled in one Cursor window at a time!
 
+1. Add the following JSON snippet to your MCP servers configuration:
+
+```json
+  "figma-edit-mcp": {
+    "command": "node",
+    "args": [
+      "/path/to/figma-edit-mcp/figma-mcp-server/build/index.js"
+    ],
+    "env": {
+      "FIGMA_ACCESS_TOKEN": "your_figma_personal_access_token"
+    }
+  }
 ```
-env FIGMA_ACCESS_TOKEN=your_figma_personal_access_token node /path/to/figma-edit-mcp/figma-mcp-server/build/index.js
-```
 
-Replace `/path/to/figma-edit-mcp` with the actual path to the repository.
-Replace `your_figma_personal_access_token` with your Figma Personal Access Token.
+2. Replace `/path/to/figma-edit-mcp` with the actual path to the repository.
+3. Replace `your_figma_personal_access_token` with your Figma Personal Access Token.
 
 ### How to Get a Figma Personal Access Token
 
@@ -77,62 +88,34 @@ Replace `your_figma_personal_access_token` with your Figma Personal Access Token
 
 1. Open Figma
 2. From the menu in the top right, select "Plugins" → "Development" → "Figma MCP Plugin"
-3. The plugin will launch and connect to the MCP server
+3. The plugin will launch and connect to the MCP server if it is running
 
-## Main Features
 
 ### Tools
 
-#### Low-Level Tools (Recommended for AI)
+- `get_mcp_tool_usage`: Tool to get usage information for MCP tools
+- `get_file`: Tool to retrieve the contents of a Figma file (including node IDs for use with update_node)
+- `create_node`: Create any Figma node type with any properties. Provides maximum flexibility for creating nodes at the lowest level. Supports using variables in properties.
+- `update_node`: Update any property of an existing Figma node or delete it. Provides maximum flexibility for modifying nodes at the lowest level. Supports using variables in properties.
+- `get_variables`: Retrieve all variables from a Figma file. Variables are reusable design tokens.
+- `create_variable`: Create a new variable in a Figma file. Supports COLOR, FLOAT, STRING, and BOOLEAN types.
+- `update_variable`: Update an existing variable (name, values, description, scopes).
+- `delete_variable`: Delete a variable from a Figma file.
 
-- **create_node**: Create any Figma node type with any properties. Provides maximum flexibility for creating nodes at the lowest level. Supports using variables in properties.
-- **update_node**: Update any property of an existing Figma node or delete it. Provides maximum flexibility for modifying nodes at the lowest level. Supports using variables in properties.
-- **get_variables**: Retrieve all variables from a Figma file. Variables are reusable design tokens.
-- **create_variable**: Create a new variable in a Figma file. Supports COLOR, FLOAT, STRING, and BOOLEAN types.
-- **update_variable**: Update an existing variable (name, values, description, scopes).
-- **delete_variable**: Delete a variable from a Figma file.
+### Note
+Real design should done by humans who care about their craft. AI should only be used to help with tedious tasks.
 
-#### File and Information Tools
+## Legal
 
-- **get_file**: Tool to retrieve the contents of a Figma file (including node IDs for use with update_node)
-- **get_mcp_tool_usage**: Tool to get usage information for MCP tools
+Based on [figma-edit-mcp](https://github.com/asamuzak09/figma-edit-mcp) by asamuzak
 
-### Variable Tools
+Released under the [ISC License](https://github.com/ivoilic/figma-edit-mcp/blob/main/LICENSE)
 
-- **get_variables**: Retrieve all variables from a Figma file
-- **create_variable**: Create a new variable (COLOR, FLOAT, STRING, or BOOLEAN type)
-- **update_variable**: Update an existing variable's properties
-- **delete_variable**: Delete a variable from a file
-
-### Using Variables in Nodes
-
-Variables can be used in node properties like fills and strokes. Use the following format:
-```json
-{
-  "fills": [
-    {
-      "type": "VARIABLE",
-      "variableId": "VARIABLE_ID"
-    }
-  ]
-}
-```
-
-Get variable IDs using the `get_variables` tool.
-
-### Supported Node Types (create_node)
-
-- **FRAME**: Create frames used as backgrounds or containers
-- **TEXT**: Create text elements (titles, descriptions, etc.)
-- **RECTANGLE**: Create rectangles (buttons, cards, etc.)
-- **ELLIPSE**: Create ellipses (icons, decorations, etc.)
-- **LINE**: Create lines (dividers, arrows, etc.)
-- **VECTOR**: Create vector shapes
-- **STAR**: Create star shapes
-- **POLYGON**: Create polygon shapes
-- **GROUP**: Create groups
-- **COMPONENT**: Create reusable components
-- **COMPONENT_SET**: Create component sets
-- **SECTION**: Create sections
-- And more...
-
+Copyright © 2025 by [Ivo Ilić](https://www.ivoilic.com)
+<div style="font-size:0.75em;">
+This software is in no way endorsed by, licensed by, or officially associated in any way with Figma, Inc.
+<br/><br/>
+The maintainers of this repo make no claim to the ownership of the brand name "Figma". The name is used purely to denote this softwares compatibility with the Figma platform.
+<br/><br/>
+Usage of this software could potentially violate Figma's terms of service or end user license agreement. Use this software at your own risk.
+</div>

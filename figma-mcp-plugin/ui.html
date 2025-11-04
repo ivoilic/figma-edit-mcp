@@ -97,11 +97,11 @@
   <button id="cancel" class="secondary">Close Plugin</button>
 
   <script>
-    // ステータス表示
+    // Status display
     const statusEl = document.getElementById('status');
     const logEl = document.getElementById('log');
 
-    // ログ表示関数
+    // Log display function
     function addLogEntry(message, type = 'info') {
       const entry = document.createElement('div');
       entry.className = 'log-entry ' + type;
@@ -110,16 +110,16 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // 初期ログ
+    // Initial log
     addLogEntry('Plugin initialized');
 
-    // ステータス更新
+    // Update status
     function updateStatus(connected) {
       statusEl.className = 'status ' + (connected ? 'connected' : 'disconnected');
       statusEl.textContent = connected ? 'Connected to MCP Server' : 'Disconnected';
     }
 
-    // イベントリスナー
+    // Event listeners
     document.getElementById('healthcheck').addEventListener('click', () => {
       parent.postMessage({ pluginMessage: { type: 'register' } }, '*');
       addLogEntry('Connecting to MCP server...');
@@ -129,7 +129,7 @@
       parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
     });
 
-    // プラグインからのメッセージを処理
+    // Process messages from plugin
     window.onmessage = (event) => {
       const message = event.data.pluginMessage;
       

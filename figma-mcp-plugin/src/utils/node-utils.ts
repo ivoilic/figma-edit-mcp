@@ -59,6 +59,15 @@ export function applyPropertiesToNode(
     }
   }
 
+  // Handle boundVariables at node level (for binding fills/strokes to variables)
+  if (properties.boundVariables !== undefined && 'boundVariables' in node) {
+    try {
+      (node as any).boundVariables = properties.boundVariables;
+    } catch (e) {
+      console.error('Error setting boundVariables:', e);
+    }
+  }
+
   // Fills and strokes (support variables)
   if ('fills' in node) {
     const paintNode = node as GeometryMixin;
@@ -98,8 +107,14 @@ export function applyPropertiesToNode(
             if (fill.blendMode !== undefined) normalizedFill.blendMode = fill.blendMode;
             if (fill.visible !== undefined) normalizedFill.visible = fill.visible;
             
+            // Preserve boundVariables if present (for variable binding)
+            if (fill.boundVariables !== undefined) {
+              normalizedFill.boundVariables = fill.boundVariables;
+            }
+            
             return normalizedFill;
           }
+          // Preserve boundVariables on any fill type
           return fill;
         });
         

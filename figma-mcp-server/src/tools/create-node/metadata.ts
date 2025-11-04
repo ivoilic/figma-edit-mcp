@@ -138,8 +138,8 @@ export const createNodeMetadata: ToolUsageInfo = {
 </use_mcp_tool>`
     },
     {
-      title: "Create Rectangle Using Variable",
-      description: "Create a rectangle that uses a color variable for its fill",
+      title: "Create Rectangle with Bound Variable",
+      description: "Create a rectangle with a fill bound to a Figma variable. IMPORTANT: boundVariables MUST be inside each fill object.",
       code: `<use_mcp_tool>
 <server_name>figma-mcp-server</server_name>
 <tool_name>create_node</tool_name>
@@ -155,8 +155,13 @@ export const createNodeMetadata: ToolUsageInfo = {
     "height": 50,
     "fills": [
       {
-        "type": "VARIABLE",
-        "variableId": "VARIABLE_ID_FROM_GET_VARIABLES"
+        "type": "SOLID",
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:27:17"
+          }
+        }
       }
     ],
     "cornerRadius": 8
@@ -171,8 +176,9 @@ export const createNodeMetadata: ToolUsageInfo = {
     "All properties are passed directly to Figma's API, so you must use the exact property names and types from the Figma Plugin API.",
     "For text nodes, you must include the 'characters' property with the text content.",
     "Color values in fills and strokes use RGB values from 0 to 1.",
-    "To use variables in fills or strokes, use: { type: 'VARIABLE', variableId: 'VARIABLE_ID' }",
-    "Variables can be retrieved using get_variables tool.",
+    "IMPORTANT: To bind variables to fills/strokes, put 'boundVariables' INSIDE each fill/stroke object, NOT at the top level of properties.",
+    "Variable IDs must be in 'VariableID:X:Y' format (get them from get_variables tool).",
+    "When binding variables, use: {\"fills\": [{\"type\": \"SOLID\", \"boundVariables\": {\"color\": {\"type\": \"VARIABLE_ALIAS\", \"id\": \"VariableID:27:17\"}}}]}",
     "Refer to Figma Plugin API documentation for complete list of available properties for each node type.",
     "If parentId is provided, the node will be added as a child of that node. Otherwise, it will be added to the current page."
   ]

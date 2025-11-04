@@ -1,14 +1,21 @@
-import { logToUI } from '../utils/logger';
-import { createFrameElement } from '../elements/frame';
-import { createTextElement } from '../elements/text';
-import { createRectangleElement } from '../elements/rectangle';
-import { createEllipseElement } from '../elements/ellipse';
-import { createLineElement } from '../elements/line';
-import { createImageElement } from '../elements/image';
-import { createComponentElement } from '../elements/component';
-import { createNode } from '../nodes/create';
-import { updateNode } from '../nodes/update';
-import { deleteNode } from '../nodes/delete';
+import { logToUI } from "../utils/logger";
+import { DEBUG } from "../config/constants";
+import { createFrameElement } from "../elements/frame";
+import { createTextElement } from "../elements/text";
+import { createRectangleElement } from "../elements/rectangle";
+import { createEllipseElement } from "../elements/ellipse";
+import { createLineElement } from "../elements/line";
+import { createImageElement } from "../elements/image";
+import { createComponentElement } from "../elements/component";
+import { createNode } from "../nodes/create";
+import { updateNode } from "../nodes/update";
+import { deleteNode } from "../nodes/delete";
+import {
+  createVariable,
+  updateVariable,
+  deleteVariable,
+  getVariables,
+} from "../variables/index";
 
 type UpdateData = {
   type: string;
@@ -21,34 +28,62 @@ export const applyUpdates = async (updates: unknown) => {
     // Process updates
     if (
       updates &&
-      typeof updates === 'object' &&
-      'updates' in updates &&
+      typeof updates === "object" &&
+      "updates" in updates &&
       Array.isArray((updates as { updates: unknown[] }).updates)
     ) {
       // Format from MCP server (updates.updates format)
       const updateList = (updates as { updates: UpdateData[] }).updates;
-      
+
       // Process each update
       for (const update of updateList) {
         const { type, data } = update;
         if (!type) continue;
 
         // Log tool call
-        if (type === 'createNode') {
+        if (type === "createNode") {
           logToUI(`create_node called`);
-        } else if (type === 'updateNode') {
+        } else if (type === "updateNode") {
           logToUI(`update_node called`);
-        } else if (type === 'deleteNode') {
+        } else if (type === "deleteNode") {
           logToUI(`delete_node called`);
+        } else if (type === "createVariable") {
+          logToUI(`create_variable called`);
+        } else if (type === "updateVariable") {
+          logToUI(`update_variable called`);
+        } else if (type === "deleteVariable") {
+          logToUI(`delete_variable called`);
+        } else if (type === "getVariables") {
+          logToUI(`get_variables called`);
+          if (DEBUG)
+            console.log(
+              "[Processor] Processing getVariables update (updates.updates format)"
+            );
         }
 
         // Process new low-level operations
-        if (type === 'createNode') {
+        if (type === "createNode") {
           await createNode(data as Parameters<typeof createNode>[0]);
-        } else if (type === 'updateNode') {
+        } else if (type === "updateNode") {
           await updateNode(data as Parameters<typeof updateNode>[0]);
-        } else if (type === 'deleteNode') {
+        } else if (type === "deleteNode") {
           deleteNode(data as Parameters<typeof deleteNode>[0]);
+        } else if (type === "createVariable") {
+          await createVariable(data as Parameters<typeof createVariable>[0]);
+        } else if (type === "updateVariable") {
+          await updateVariable(data as Parameters<typeof updateVariable>[0]);
+        } else if (type === "deleteVariable") {
+          await deleteVariable(data as Parameters<typeof deleteVariable>[0]);
+        } else if (type === "getVariables") {
+          if (DEBUG)
+            console.log(
+              "[Processor] Calling getVariables() (updates.updates format)"
+            );
+          await getVariables();
+          if (DEBUG)
+            console.log(
+              "[Processor] getVariables() completed (updates.updates format)"
+            );
         } else {
           // Legacy format updates (for compatibility)
           if (data) {
@@ -65,21 +100,45 @@ export const applyUpdates = async (updates: unknown) => {
         if (!type) continue;
 
         // Log tool call
-        if (type === 'createNode') {
+        if (type === "createNode") {
           logToUI(`create_node called`);
-        } else if (type === 'updateNode') {
+        } else if (type === "updateNode") {
           logToUI(`update_node called`);
-        } else if (type === 'deleteNode') {
+        } else if (type === "deleteNode") {
           logToUI(`delete_node called`);
+        } else if (type === "createVariable") {
+          logToUI(`create_variable called`);
+        } else if (type === "updateVariable") {
+          logToUI(`update_variable called`);
+        } else if (type === "deleteVariable") {
+          logToUI(`delete_variable called`);
+        } else if (type === "getVariables") {
+          logToUI(`get_variables called`);
+          if (DEBUG)
+            console.log(
+              "[Processor] Processing getVariables update (array format)"
+            );
         }
 
         // Process new low-level operations
-        if (type === 'createNode') {
+        if (type === "createNode") {
           await createNode(data as Parameters<typeof createNode>[0]);
-        } else if (type === 'updateNode') {
+        } else if (type === "updateNode") {
           await updateNode(data as Parameters<typeof updateNode>[0]);
-        } else if (type === 'deleteNode') {
+        } else if (type === "deleteNode") {
           deleteNode(data as Parameters<typeof deleteNode>[0]);
+        } else if (type === "createVariable") {
+          await createVariable(data as Parameters<typeof createVariable>[0]);
+        } else if (type === "updateVariable") {
+          await updateVariable(data as Parameters<typeof updateVariable>[0]);
+        } else if (type === "deleteVariable") {
+          await deleteVariable(data as Parameters<typeof deleteVariable>[0]);
+        } else if (type === "getVariables") {
+          if (DEBUG)
+            console.log("[Processor] Calling getVariables() (array format)");
+          await getVariables();
+          if (DEBUG)
+            console.log("[Processor] getVariables() completed (array format)");
         } else {
           // Legacy format updates (for compatibility)
           if (data) {
@@ -89,15 +148,15 @@ export const applyUpdates = async (updates: unknown) => {
         }
       }
     } else {
-      // 旧形式の更新（互換性のため）
+      // Legacy format update (for compatibility)
       await processUpdates(updates as Record<string, unknown>);
     }
 
-    figma.notify('Design updated successfully');
+    figma.notify("Design updated successfully");
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logToUI(`Failed to apply updates: ${errorMessage}`, 'error');
-    figma.notify('Error occurred while updating design', { error: true });
+    logToUI(`Failed to apply updates: ${errorMessage}`, "error");
+    figma.notify("Error occurred while updating design", { error: true });
   }
 };
 
@@ -233,4 +292,3 @@ const processUpdates = async (updates: Record<string, unknown>) => {
     }
   }
 };
-

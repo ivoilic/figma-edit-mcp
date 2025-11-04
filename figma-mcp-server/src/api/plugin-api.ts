@@ -5,7 +5,8 @@ import { PluginHealthcheckRequest } from '../types.js';
 import {
   registerWebSocketConnection,
   unregisterWebSocketConnection,
-  pluginConnections
+  pluginConnections,
+  storeVariables
 } from './message-queue.js';
 
 // Create router for plugin API
@@ -49,19 +50,53 @@ pluginRouter.get('/ws', (c) => {
         return;
       }
 
-      console.error(`WebSocket connection opened for file ${fileId}, plugin ${pluginId}`);
+      console.error(`[WebSocket] Connection opened for file ${fileId}, plugin ${pluginId}`);
+      
+      // Store fileId on WebSocket for later retrieval
+      (ws as any).fileId = fileId;
       
       // Register the WebSocket connection
       registerWebSocketConnection(fileId, pluginId, ws);
     },
     onMessage(event: any, ws: any) {
       try {
-        // Handle incoming messages from plugin (if needed)
+        // Handle incoming messages from plugin
         const data = JSON.parse(event.data.toString());
         console.error('Received message from plugin:', data);
         
-        // Extract fileId from connection (we could store it in ws metadata)
-        // For now, we'll rely on the plugin sending fileId in messages if needed
+        // Handle variable responses
+        if (data.type === 'variables-response') {
+          console.error('[WebSocket] Received variables-response message');
+          console.error('[WebSocket] Message data:', JSON.stringify(data, null, 2));
+          
+          // Try to get fileId from WebSocket first (more reliable)
+          const fileIdFromWs = (ws as any).fileId;
+          let fileId: string | null = null;
+          
+          if (fileIdFromWs) {
+            console.error(`[WebSocket] Using fileId from WebSocket: ${fileIdFromWs}`);
+            fileId = fileIdFromWs;
+          } else {
+            // Fallback: Find the fileId for this WebSocket connection
+            console.error('[WebSocket] No fileId on WebSocket, searching connections...');
+            for (const [fid, connection] of Object.entries(pluginConnections)) {
+              if (connection.ws === ws) {
+                fileId = fid;
+                console.error(`[WebSocket] Found fileId ${fileId} for this WebSocket connection`);
+                break;
+              }
+            }
+          }
+          
+          if (fileId) {
+            console.error(`[WebSocket] Storing ${data.variables?.length || 0} variables for file ${fileId}`);
+            storeVariables(fileId, data.variables || [], data.collections || []);
+            console.error(`[WebSocket] Successfully stored variables for file ${fileId}`);
+          } else {
+            console.error('[WebSocket] ERROR: Could not determine fileId for WebSocket connection when storing variables');
+            console.error('[WebSocket] Available connections:', Object.keys(pluginConnections).join(', '));
+          }
+        }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
       }

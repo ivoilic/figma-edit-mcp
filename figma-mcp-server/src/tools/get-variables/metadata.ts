@@ -34,7 +34,10 @@ export const getVariablesMetadata: ToolUsageInfo = {
   notes: [
     "Variables are design tokens that can be reused across your design.",
     "Variables can be of different types: COLOR, FLOAT, STRING, BOOLEAN.",
-    "Use variables in node properties by referencing them with their variable ID.",
-    "The response will include variable collections, modes, and variable definitions."
+    "The response is a JSON object with 'variables' and 'collections' arrays.",
+    "Each variable has an 'id' field in 'VariableID:27:17' format - USE THIS FOR BINDING.",
+    "Use the 'id' field (VariableID format) when binding variables to nodes using boundVariables.",
+    "Example binding format: { 'boundVariables': { 'fills': [{ 'type': 'VARIABLE_ALIAS', 'id': 'VariableID:27:17' }] } }",
+    "The response also includes a '_meta' field with summary information and all variable IDs."
   ]
 };

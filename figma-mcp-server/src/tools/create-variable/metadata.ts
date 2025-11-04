@@ -39,7 +39,7 @@ export const createVariableMetadata: ToolUsageInfo = {
         type: "array",
         items: {
           type: "string",
-          enum: ["ALL_SCOPES", "TEXT_COLOR", "BG_COLOR", "FILL_COLOR", "STROKE_COLOR", "EFFECT_COLOR", "OPACITY", "FONT_FAMILY", "FONT_SIZE", "FONT_WEIGHT", "LINE_HEIGHT", "LETTER_SPACING", "PARAGRAPH_SPACING", "PARAGRAPH_INDENT", "BORDER_RADIUS", "SPACING", "DIMENSION", "GAP", "SIZING_WIDTH", "SIZING_HEIGHT"]
+          enum: ["ALL_SCOPES", "TEXT_CONTENT", "CORNER_RADIUS", "WIDTH_HEIGHT", "GAP", "ALL_FILLS", "FRAME_FILL", "SHAPE_FILL", "TEXT_FILL", "STROKE_FLOAT", "EFFECT_FLOAT", "EFFECT_COLOR", "OPACITY", "FONT_STYLE", "FONT_FAMILY", "FONT_SIZE", "LINE_HEIGHT", "LETTER_SPACING", "PARAGRAPH_SPACING", "PARAGRAPH_INDENT", "TRANSFORM", "STROKE_COLOR", "FONT_WEIGHT"]
         },
         description: "Optional: Scopes where this variable can be used"
       }
@@ -61,7 +61,7 @@ export const createVariableMetadata: ToolUsageInfo = {
   "valuesByMode": {
     "MODE_ID_1": { "r": 0.2, "g": 0.6, "b": 1.0, "a": 1.0 }
   },
-  "scopes": ["FILL_COLOR", "TEXT_COLOR"]
+  "scopes": ["SHAPE_FILL", "TEXT_FILL"]
 }
 </arguments>
 </use_mcp_tool>`
@@ -90,7 +90,7 @@ export const createVariableMetadata: ToolUsageInfo = {
     "Variables must have values for at least one mode.",
     "Mode IDs can be obtained from get_variables or by inspecting the file.",
     "COLOR variables use RGBA values (0-1 range).",
-    "Scopes define where the variable can be applied (e.g., FILL_COLOR, TEXT_COLOR, etc.).",
+    "Scopes define where the variable can be applied (e.g., SHAPE_FILL, TEXT_FILL, FRAME_FILL, ALL_FILLS, etc.).",
     "If collectionId is not provided, the variable will be added to the default collection."
   ]
 };

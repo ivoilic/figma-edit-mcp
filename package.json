@@ -13,5 +13,9 @@
     "pnpm": ">=8.0.0"
   },
   "author": "Ivo Ilić <hello@ivoilic.com>",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ivoilic/figma-edit-mcp.git"
+  }
 }

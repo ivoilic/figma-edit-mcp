@@ -12,7 +12,7 @@ export async function handleUpdateVariableTool(params: {
   name?: string;
   valuesByMode?: Record<string, any>;
   description?: string;
-  scopes?: Array<'ALL_SCOPES' | 'TEXT_COLOR' | 'BG_COLOR' | 'FILL_COLOR' | 'STROKE_COLOR' | 'EFFECT_COLOR' | 'OPACITY' | 'FONT_FAMILY' | 'FONT_SIZE' | 'FONT_WEIGHT' | 'LINE_HEIGHT' | 'LETTER_SPACING' | 'PARAGRAPH_SPACING' | 'PARAGRAPH_INDENT' | 'BORDER_RADIUS' | 'SPACING' | 'DIMENSION' | 'GAP' | 'SIZING_WIDTH' | 'SIZING_HEIGHT'>;
+  scopes?: Array<'ALL_SCOPES' | 'TEXT_CONTENT' | 'CORNER_RADIUS' | 'WIDTH_HEIGHT' | 'GAP' | 'ALL_FILLS' | 'FRAME_FILL' | 'SHAPE_FILL' | 'TEXT_FILL' | 'STROKE_FLOAT' | 'EFFECT_FLOAT' | 'EFFECT_COLOR' | 'OPACITY' | 'FONT_STYLE' | 'FONT_FAMILY' | 'FONT_SIZE' | 'LINE_HEIGHT' | 'LETTER_SPACING' | 'PARAGRAPH_SPACING' | 'PARAGRAPH_INDENT' | 'TRANSFORM' | 'STROKE_COLOR' | 'FONT_WEIGHT'>;
 }) {
   try {
     const { fileId, variableId, name, valuesByMode, description, scopes } = params;

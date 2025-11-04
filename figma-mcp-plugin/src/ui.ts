@@ -387,9 +387,19 @@ const html = `
                     addLogEntry('update_node called', 'info');
                   } else if (update.type === 'deleteNode') {
                     addLogEntry('delete_node called', 'info');
+                  } else if (update.type === 'getVariables') {
+                    addLogEntry('get_variables called', 'info');
+                  } else if (update.type === 'createVariable') {
+                    addLogEntry('create_variable called', 'info');
+                  } else if (update.type === 'updateVariable') {
+                    addLogEntry('update_variable called', 'info');
+                  } else if (update.type === 'deleteVariable') {
+                    addLogEntry('delete_variable called', 'info');
                   }
                 }
               }
+              
+              console.log('[UI] Received update message:', JSON.stringify(message, null, 2));
               
               try {
                 // Forward update to plugin code
@@ -545,6 +555,26 @@ const html = `
         addLogEntry(message.message);
       } else if (message.type === 'error') {
         addLogEntry(message.message, 'error');
+      } else if (message.type === 'send-variables-response') {
+        // Forward variables response to server via WebSocket
+        console.log('[UI] Received send-variables-response from plugin:', {
+          variableCount: message.variables?.length || 0,
+          collectionCount: message.collections?.length || 0
+        });
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          const response = {
+            type: 'variables-response',
+            variables: message.variables || [],
+            collections: message.collections || []
+          };
+          console.log('[UI] Sending variables response to server:', JSON.stringify(response, null, 2));
+          ws.send(JSON.stringify(response));
+          const varCount = message.variables ? message.variables.length : 0;
+          addLogEntry('Sent ' + varCount + ' variables to server', 'success');
+        } else {
+          console.error('[UI] WebSocket not connected, cannot send variables. readyState:', ws?.readyState);
+          addLogEntry('WebSocket not connected, cannot send variables', 'error');
+        }
       }
     };
   </script>

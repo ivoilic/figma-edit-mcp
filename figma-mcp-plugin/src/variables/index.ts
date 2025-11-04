@@ -1,43 +1,61 @@
-import { logToUI } from '../utils/logger';
+import { logToUI } from "../utils/logger";
+import { DEBUG } from "../config/constants";
 
 type VariableScope =
-  | 'ALL_SCOPES'
-  | 'TEXT_COLOR'
-  | 'BG_COLOR'
-  | 'FILL_COLOR'
-  | 'STROKE_COLOR'
-  | 'EFFECT_COLOR'
-  | 'OPACITY'
-  | 'FONT_FAMILY'
-  | 'FONT_SIZE'
-  | 'FONT_WEIGHT'
-  | 'LINE_HEIGHT'
-  | 'LETTER_SPACING'
-  | 'PARAGRAPH_SPACING'
-  | 'PARAGRAPH_INDENT'
-  | 'BORDER_RADIUS'
-  | 'SPACING'
-  | 'DIMENSION'
-  | 'GAP'
-  | 'SIZING_WIDTH'
-  | 'SIZING_HEIGHT';
+  | "ALL_SCOPES"
+  | "TEXT_CONTENT"
+  | "CORNER_RADIUS"
+  | "WIDTH_HEIGHT"
+  | "GAP"
+  | "ALL_FILLS"
+  | "FRAME_FILL"
+  | "SHAPE_FILL"
+  | "TEXT_FILL"
+  | "STROKE_FLOAT"
+  | "EFFECT_FLOAT"
+  | "EFFECT_COLOR"
+  | "OPACITY"
+  | "FONT_STYLE"
+  | "FONT_FAMILY"
+  | "FONT_SIZE"
+  | "LINE_HEIGHT"
+  | "LETTER_SPACING"
+  | "PARAGRAPH_SPACING"
+  | "PARAGRAPH_INDENT"
+  | "TRANSFORM"
+  | "STROKE_COLOR"
+  | "FONT_WEIGHT";
 
 // Get all variables from the file
 export const getVariables = async () => {
   try {
+    if (DEBUG) console.log("[getVariables] Starting variable retrieval...");
     const variables = figma.variables.getLocalVariables();
     const collections = figma.variables.getLocalVariableCollections();
+    if (DEBUG)
+      console.log(
+        `[getVariables] Found ${variables.length} variables and ${collections.length} collections`
+      );
 
     const result = {
-      variables: variables.map((v) => ({
-        id: v.id,
-        name: v.name,
-        type: v.resolvedType,
-        valuesByMode: v.valuesByMode,
-        scopes: v.scopes,
-        description: v.description || '',
-        hiddenFromPublishing: v.hiddenFromPublishing,
-      })),
+      variables: variables.map((v) => {
+        // Format variable ID for binding: VariableID:27:17
+        // Figma's v.id returns format like "27:17", we need "VariableID:27:17" for binding
+        const variableId = v.id.startsWith("VariableID:")
+          ? v.id
+          : `VariableID:${v.id}`;
+
+        return {
+          id: variableId,
+          rawId: v.id, // Keep original ID format for reference
+          name: v.name,
+          type: v.resolvedType,
+          valuesByMode: v.valuesByMode,
+          scopes: v.scopes,
+          description: v.description || "",
+          hiddenFromPublishing: v.hiddenFromPublishing,
+        };
+      }),
       collections: collections.map((c) => ({
         id: c.id,
         name: c.name,
@@ -51,24 +69,43 @@ export const getVariables = async () => {
     );
     figma.notify(`Retrieved ${variables.length} variables`);
 
-    // Send variables back to server (could be enhanced to return via API)
-    console.log('Variables:', JSON.stringify(result, null, 2));
+    // Send variables back to server via UI/WebSocket
+    if (DEBUG)
+      console.log(
+        "[getVariables] Variables result:",
+        JSON.stringify(result, null, 2)
+      );
+    if (DEBUG)
+      console.log(
+        `[getVariables] Sending ${result.variables.length} variables to UI`
+      );
+
+    // Notify UI to send variables back to server
+    figma.ui.postMessage({
+      type: "send-variables-response",
+      variables: result.variables,
+      collections: result.collections,
+    });
+    if (DEBUG)
+      console.log(
+        "[getVariables] Posted send-variables-response message to UI"
+      );
   } catch (error) {
-    console.error('Error getting variables:', error);
+    console.error("Error getting variables:", error);
     logToUI(
       `Error getting variables: ${
         error instanceof Error ? error.message : String(error)
       }`,
-      'error'
+      "error"
     );
-    figma.notify('Error getting variables', { error: true });
+    figma.notify("Error getting variables", { error: true });
   }
 };
 
 // Create a new variable
 export const createVariable = async (data: {
   name: string;
-  variableType: 'COLOR' | 'FLOAT' | 'STRING' | 'BOOLEAN';
+  variableType: "COLOR" | "FLOAT" | "STRING" | "BOOLEAN";
   valuesByMode: Record<string, unknown>;
   collectionId?: string;
   description?: string;
@@ -99,33 +136,19 @@ export const createVariable = async (data: {
       collection =
         collections.length > 0
           ? collections[0]
-          : figma.variables.createVariableCollection('Default');
+          : figma.variables.createVariableCollection("Default");
       if (!collection) {
-        throw new Error('Failed to create or find variable collection');
+        throw new Error("Failed to create or find variable collection");
       }
     }
 
     // Get first mode ID for variable creation
     const firstModeId = collection.modes[0]?.modeId;
     if (!firstModeId) {
-      throw new Error('Collection must have at least one mode');
+      throw new Error("Collection must have at least one mode");
     }
 
-    // Get first value for initial creation
-    const firstValue = valuesByMode[firstModeId];
-    if (firstValue === undefined) {
-      // Try to get any value from valuesByMode
-      const modeIds = Object.keys(valuesByMode);
-      if (modeIds.length === 0) {
-        throw new Error('At least one value must be provided');
-      }
-      const anyValue = valuesByMode[modeIds[0]];
-      if (anyValue === undefined) {
-        throw new Error('At least one value must be provided');
-      }
-    }
-
-    // Create variable with first mode value
+    // Create variable (doesn't require initial value)
     const variable = figma.variables.createVariable(
       name,
       collection,
@@ -133,17 +156,34 @@ export const createVariable = async (data: {
     );
 
     // Set values for all modes
+    // First, try to set values using provided mode IDs
+    let hasSetValue = false;
     const modeEntries = Object.keys(valuesByMode).map(
       (key) => [key, valuesByMode[key]] as [string, unknown]
     );
+
     for (const [modeId, value] of modeEntries) {
       // Verify mode exists in collection
       const modeExists = collection.modes.some((m) => m.modeId === modeId);
       if (modeExists) {
         variable.setValueForMode(modeId, value as VariableValue);
+        hasSetValue = true;
       } else {
         console.warn(`Mode ${modeId} not found in collection, skipping`);
       }
+    }
+
+    // If no values were set (mode IDs didn't match), use first mode and first value
+    if (!hasSetValue && modeEntries.length > 0) {
+      const firstValue = modeEntries[0][1];
+      variable.setValueForMode(firstModeId, firstValue as VariableValue);
+      logToUI(
+        `Warning: Provided mode IDs didn't match collection modes. Used first mode (${firstModeId}) with provided value.`
+      );
+    } else if (!hasSetValue) {
+      throw new Error(
+        "At least one value must be provided and match a collection mode"
+      );
     }
 
     // Set description
@@ -159,14 +199,14 @@ export const createVariable = async (data: {
     logToUI(`Created variable: ${name}`);
     figma.notify(`Created variable: ${name}`);
   } catch (error) {
-    console.error('Error creating variable:', error);
+    console.error("Error creating variable:", error);
     logToUI(
       `Error creating variable: ${
         error instanceof Error ? error.message : String(error)
       }`,
-      'error'
+      "error"
     );
-    figma.notify('Error creating variable', { error: true });
+    figma.notify("Error creating variable", { error: true });
   }
 };
 
@@ -181,7 +221,7 @@ export const updateVariable = async (data: {
   try {
     const { variableId, name, valuesByMode, description, scopes } = data;
 
-    const variable = figma.variables.getVariableById(variableId);
+    const variable = await figma.variables.getVariableByIdAsync(variableId);
     if (!variable) {
       throw new Error(`Variable with id ${variableId} not found`);
     }
@@ -214,14 +254,14 @@ export const updateVariable = async (data: {
     logToUI(`Updated variable: ${variable.name}`);
     figma.notify(`Updated variable: ${variable.name}`);
   } catch (error) {
-    console.error('Error updating variable:', error);
+    console.error("Error updating variable:", error);
     logToUI(
       `Error updating variable: ${
         error instanceof Error ? error.message : String(error)
       }`,
-      'error'
+      "error"
     );
-    figma.notify('Error updating variable', { error: true });
+    figma.notify("Error updating variable", { error: true });
   }
 };
 
@@ -230,7 +270,7 @@ export const deleteVariable = async (data: { variableId: string }) => {
   try {
     const { variableId } = data;
 
-    const variable = figma.variables.getVariableById(variableId);
+    const variable = await figma.variables.getVariableByIdAsync(variableId);
     if (!variable) {
       throw new Error(`Variable with id ${variableId} not found`);
     }
@@ -241,14 +281,13 @@ export const deleteVariable = async (data: { variableId: string }) => {
     logToUI(`Deleted variable: ${variableName}`);
     figma.notify(`Deleted variable: ${variableName}`);
   } catch (error) {
-    console.error('Error deleting variable:', error);
+    console.error("Error deleting variable:", error);
     logToUI(
       `Error deleting variable: ${
         error instanceof Error ? error.message : String(error)
       }`,
-      'error'
+      "error"
     );
-    figma.notify('Error deleting variable', { error: true });
+    figma.notify("Error deleting variable", { error: true });
   }
 };
-

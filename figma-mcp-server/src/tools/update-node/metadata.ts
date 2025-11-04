@@ -122,6 +122,34 @@ export const updateNodeMetadata: ToolUsageInfo = {
 }
 </arguments>
 </use_mcp_tool>`
+    },
+    {
+      title: "Bind Variable to Fill Color",
+      description: "Link a Figma variable to a node's fill color. IMPORTANT: boundVariables MUST be inside each fill object, not at the top level of properties.",
+      code: `<use_mcp_tool>
+<server_name>figma-mcp-server</server_name>
+<tool_name>update_node</tool_name>
+<arguments>
+{
+  "fileId": "YOUR_FIGMA_FILE_ID",
+  "nodeId": "NODE_ID",
+  "operation": "update",
+  "properties": {
+    "fills": [
+      {
+        "type": "SOLID",
+        "boundVariables": {
+          "color": {
+            "type": "VARIABLE_ALIAS",
+            "id": "VariableID:27:17"
+          }
+        }
+      }
+    ]
+  }
+}
+</arguments>
+</use_mcp_tool>`
     }
   ],
   notes: [
@@ -131,6 +159,9 @@ export const updateNodeMetadata: ToolUsageInfo = {
     "To move a node to a different parent, specify both parentId and optionally index for the position.",
     "Deleting a node will also delete all its children.",
     "Color values in fills and strokes use RGB values from 0 to 1.",
-    "Refer to Figma Plugin API documentation for complete list of available properties for each node type."
+    "Refer to Figma Plugin API documentation for complete list of available properties for each node type.",
+    "IMPORTANT: To bind variables to fills/strokes, put 'boundVariables' INSIDE each fill/stroke object, NOT at the top level of properties.",
+    "Variable IDs must be in 'VariableID:X:Y' format (get them from get_variables tool).",
+    "When binding variables, use: {\"fills\": [{\"type\": \"SOLID\", \"boundVariables\": {\"color\": {\"type\": \"VARIABLE_ALIAS\", \"id\": \"VariableID:27:17\"}}}]}"
   ]
 };

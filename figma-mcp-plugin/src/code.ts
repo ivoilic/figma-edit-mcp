@@ -15,9 +15,9 @@ function logToUI(message: string, type: "log" | "error" = "log") {
 }
 
 // Initialize plugin
-console.log("[code.ts] Plugin initializing...");
+if (DEBUG) console.log("[code.ts] Plugin initializing...");
 figma.showUI(__html__, { width: 300, height: 400 });
-console.log("[code.ts] UI shown");
+if (DEBUG) console.log("[code.ts] UI shown");
 
 // Track font loading status
 let fontsLoaded = false;
@@ -28,7 +28,7 @@ Promise.all([
   figma.loadFontAsync({ family: "Inter", style: "Bold" }),
 ])
   .then(() => {
-    console.log("[code.ts] Fonts loaded successfully");
+    if (DEBUG) console.log("[code.ts] Fonts loaded successfully");
     logToUI("Fonts loaded successfully");
     fontsLoaded = true;
     // Connect to server after fonts are loaded
@@ -73,10 +73,10 @@ async function healthcheckWithServer() {
     }
 
     // After healthcheck, ask UI to connect via WebSocket
-    figma.ui.postMessage({ 
-      type: "connect-websocket", 
-      pluginId, 
-      fileId 
+    figma.ui.postMessage({
+      type: "connect-websocket",
+      pluginId,
+      fileId,
     });
   } catch (error: unknown) {
     console.error("Failed to register with MCP server:", error);
@@ -86,37 +86,57 @@ async function healthcheckWithServer() {
   }
 }
 
-// Figmaデザインに更新を適用
+// Apply updates to Figma design
 async function applyUpdates(updates: any) {
   try {
-    console.log("[applyUpdates] Received updates:", JSON.stringify(updates, null, 2));
+    if (DEBUG)
+      console.log(
+        "[applyUpdates] Received updates:",
+        JSON.stringify(updates, null, 2)
+      );
     logToUI("[applyUpdates] Received updates: " + JSON.stringify(updates));
-    
-    // 更新の処理
+
+    // Process updates
     if (updates && updates.updates && Array.isArray(updates.updates)) {
-      // MCPサーバーから送られてくる形式（updates.updatesの形式）
-      console.log(`[applyUpdates] Processing ${updates.updates.length} updates`);
+      // Format from MCP server (updates.updates format)
+      if (DEBUG)
+        console.log(
+          `[applyUpdates] Processing ${updates.updates.length} updates`
+        );
       logToUI(`[applyUpdates] Processing ${updates.updates.length} updates`);
-      
-      // 各更新を処理
+
+      // Process each update
       for (const update of updates.updates) {
         const { type, data } = update;
         if (!type) continue;
 
-        console.log(`[applyUpdates] Processing update type: ${type}`);
+        if (DEBUG)
+          console.log(`[applyUpdates] Processing update type: ${type}`);
         logToUI(`[applyUpdates] Processing update type: ${type}`);
-        
+
         if (type === "updateNode") {
-          console.log(`[applyUpdates] updateNode data:`, JSON.stringify(data, null, 2));
+          if (DEBUG)
+            console.log(
+              `[applyUpdates] updateNode data:`,
+              JSON.stringify(data, null, 2)
+            );
           logToUI(`[applyUpdates] updateNode data: ${JSON.stringify(data)}`);
-          
+
           if (data.properties && data.properties.fills) {
-            console.log(`[applyUpdates] Fills in updateNode:`, JSON.stringify(data.properties.fills, null, 2));
-            logToUI(`[applyUpdates] Fills in updateNode: ${JSON.stringify(data.properties.fills)}`);
+            if (DEBUG)
+              console.log(
+                `[applyUpdates] Fills in updateNode:`,
+                JSON.stringify(data.properties.fills, null, 2)
+              );
+            logToUI(
+              `[applyUpdates] Fills in updateNode: ${JSON.stringify(
+                data.properties.fills
+              )}`
+            );
           }
         }
 
-        // 新しい低レベル操作を処理
+        // Process new low-level operations
         if (type === "createNode") {
           await createNode(data);
         } else if (type === "updateNode") {
@@ -124,7 +144,7 @@ async function applyUpdates(updates: any) {
         } else if (type === "deleteNode") {
           await deleteNode(data);
         } else {
-          // 旧形式の更新（互換性のため）
+          // Legacy format update (for compatibility)
           if (data) {
             const tempUpdates = { [type]: data };
             await processUpdates(tempUpdates);
@@ -132,13 +152,13 @@ async function applyUpdates(updates: any) {
         }
       }
     } else if (Array.isArray(updates)) {
-      // 配列形式の場合（互換性のため）
-      // 各更新を処理
+      // Array format case (for compatibility)
+      // Process each update
       for (const update of updates) {
         const { type, data } = update;
         if (!type) continue;
 
-        // 新しい低レベル操作を処理
+        // Process new low-level operations
         if (type === "createNode") {
           await createNode(data);
         } else if (type === "updateNode") {
@@ -146,7 +166,7 @@ async function applyUpdates(updates: any) {
         } else if (type === "deleteNode") {
           await deleteNode(data);
         } else {
-          // 旧形式の更新（互換性のため）
+          // Legacy format update (for compatibility)
           if (data) {
             const tempUpdates = { [type]: data };
             await processUpdates(tempUpdates);
@@ -154,7 +174,7 @@ async function applyUpdates(updates: any) {
         }
       }
     } else {
-      // 旧形式の更新（互換性のため）
+      // Legacy format update (for compatibility)
       await processUpdates(updates);
     }
 
@@ -200,11 +220,11 @@ async function processUpdates(updates: any) {
     frame.name = name || "New Frame";
     frame.resize(width || 100, height || 100);
 
-    // 位置の設定
+    // Set position
     if (x !== undefined) frame.x = x;
     if (y !== undefined) frame.y = y;
 
-    // 塗りつぶしの設定
+    // Set fills
     if (fills && Array.isArray(fills)) {
       try {
         frame.fills = fills as Paint[];
@@ -213,10 +233,10 @@ async function processUpdates(updates: any) {
       }
     }
 
-    // 角丸の設定
+    // Set corner radius
     if (cornerRadius !== undefined) frame.cornerRadius = cornerRadius;
 
-    // レイアウトモードの設定
+    // Set layout mode
     if (layoutMode) {
       frame.layoutMode = layoutMode as "NONE" | "HORIZONTAL" | "VERTICAL";
 
@@ -233,7 +253,7 @@ async function processUpdates(updates: any) {
       if (itemSpacing !== undefined) frame.itemSpacing = itemSpacing;
     }
 
-    // ストロークの設定
+    // Set strokes
     if (strokes && Array.isArray(strokes)) {
       try {
         frame.strokes = strokes as Paint[];
@@ -246,10 +266,10 @@ async function processUpdates(updates: any) {
     if (strokeAlign)
       frame.strokeAlign = strokeAlign as "INSIDE" | "OUTSIDE" | "CENTER";
 
-    // 透明度の設定
+    // Set opacity
     if (opacity !== undefined) frame.opacity = opacity;
 
-    // エフェクトの設定
+    // Set effects
     if (effects && Array.isArray(effects)) {
       try {
         frame.effects = effects as Effect[];
@@ -258,102 +278,102 @@ async function processUpdates(updates: any) {
       }
     }
 
-    // 表示/非表示の設定
+    // Set visibility
     if (visible !== undefined) frame.visible = visible;
 
-    // 現在のページに追加
+    // Add to current page
     figma.currentPage.appendChild(frame);
 
-    // ビューポートを新しいフレームに移動
+    // Move viewport to new frame
     figma.viewport.scrollAndZoomIntoView([frame]);
   }
 
-  // テキスト要素の作成
+  // Create text elements
   if (updates.createText) {
     if (Array.isArray(updates.createText)) {
-      // 配列の場合は各要素を処理
+      // If array, process each element
       await Promise.all(
         updates.createText.map((textData: any, index: number) =>
           createTextElement(textData, index)
         )
       );
     } else {
-      // 単一のオブジェクトの場合
+      // Single object case
       await createTextElement(updates.createText);
     }
   }
 
-  // 矩形の作成
+  // Create rectangles
   if (updates.createRectangle) {
     if (Array.isArray(updates.createRectangle)) {
-      // 配列の場合は各要素を処理
+      // If array, process each element
       await Promise.all(
         updates.createRectangle.map((rectData: any, index: number) =>
           createRectangleElement(rectData, index)
         )
       );
     } else {
-      // 単一のオブジェクトの場合
+      // Single object case
       await createRectangleElement(updates.createRectangle);
     }
   }
 
-  // 楕円の作成
+  // Create ellipses
   if (updates.createEllipse) {
     if (Array.isArray(updates.createEllipse)) {
-      // 配列の場合は各要素を処理
+      // If array, process each element
       await Promise.all(
         updates.createEllipse.map((ellipseData: any, index: number) =>
           createEllipseElement(ellipseData, index)
         )
       );
     } else {
-      // 単一のオブジェクトの場合
+      // Single object case
       await createEllipseElement(updates.createEllipse);
     }
   }
 
-  // 線の作成
+  // Create lines
   if (updates.createLine) {
     if (Array.isArray(updates.createLine)) {
-      // 配列の場合は各要素を処理
+      // If array, process each element
       updates.createLine.forEach((lineData: any, index: number) => {
         createLineElement(lineData, index);
       });
     } else {
-      // 単一のオブジェクトの場合
+      // Single object case
       createLineElement(updates.createLine);
     }
   }
 
-  // 画像の挿入
+  // Insert images
   if (updates.createImage) {
     if (Array.isArray(updates.createImage)) {
-      // 配列の場合は各要素を処理
+      // If array, process each element
       updates.createImage.forEach((imageData: any, index: number) => {
         createImageElement(imageData, index);
       });
     } else {
-      // 単一のオブジェクトの場合
+      // Single object case
       createImageElement(updates.createImage);
     }
   }
 
-  // コンポーネントの作成
+  // Create components
   if (updates.createComponent) {
     if (Array.isArray(updates.createComponent)) {
-      // 配列の場合は各要素を処理
+      // If array, process each element
       updates.createComponent.forEach((componentData: any, index: number) => {
         createComponentElement(componentData, index);
       });
     } else {
-      // 単一のオブジェクトの場合
+      // Single object case
       createComponentElement(updates.createComponent);
     }
   }
 }
 
-// テキスト要素を作成する関数
+// Function to create text elements
 function createTextElement(
   textData: {
     name?: string;
@@ -372,7 +392,7 @@ function createTextElement(
 ) {
   return new Promise<void>(async (resolve, reject) => {
     try {
-      // charactersパラメータがない場合はエラーを返す
+      // Return error if characters parameter is missing
       if (!textData.characters) {
         const error = new Error(
           "Property 'characters' is required for text elements"
@@ -404,50 +424,50 @@ function createTextElement(
       const text = figma.createText();
       text.name = name || `New Text ${index !== undefined ? index + 1 : ""}`;
 
-      // 位置の設定
+      // Set position
       if (x !== undefined) text.x = x;
       if (y !== undefined) text.y = y;
 
-      // フォントの読み込みを待機（awaitを使用して同期的に処理）
+      // Wait for font loading (process synchronously using await)
       const fontStyle = fontWeight === "Bold" ? "Bold" : "Regular";
 
       try {
-        // 常にフォントを読み込む（キャッシュされていれば高速に完了する）
+        // Always load font (will complete quickly if cached)
         await figma.loadFontAsync({ family: "Inter", style: fontStyle });
 
-        // フォントが読み込まれた後にテキストを設定
+        // Set text after font is loaded
         text.characters = characters;
         if (fontSize) text.fontSize = fontSize;
         if (fontWeight === "Bold")
           text.fontName = { family: "Inter", style: "Bold" };
 
-        // テキストの自動リサイズモードを設定
+        // Set text auto-resize mode
         if (textAutoResize) {
           text.textAutoResize = textAutoResize;
         } else {
-          // デフォルトでは幅固定で高さ自動調整
+          // Default: fixed width, auto height
           text.textAutoResize = "HEIGHT";
         }
 
-        // 幅が指定されている場合は設定
+        // Set width if specified
         if (width) {
           text.resize(width, text.height);
         } else if (characters.length > 20) {
-          // 長いテキストの場合はデフォルトの幅を設定
+          // Set default width for long text
           text.resize(300, text.height);
         }
 
-        // 段落間隔の設定
+        // Set paragraph spacing
         if (paragraphSpacing !== undefined) {
           text.paragraphSpacing = paragraphSpacing;
         }
 
-        // 行の高さの設定
+        // Set line height
         if (lineHeight) {
           text.lineHeight = lineHeight;
         }
 
-        // 塗りつぶしの設定
+        // Set fills
         if (fills && Array.isArray(fills)) {
           try {
             const solidFills = fills as SolidPaint[];
@@ -457,7 +477,7 @@ function createTextElement(
           }
         }
 
-        // 現在のページに追加
+        // Add to current page
         figma.currentPage.appendChild(text);
         resolve();
       } catch (e) {
@@ -471,7 +491,7 @@ function createTextElement(
   });
 }
 
-// 矩形を作成する関数
+// Function to create rectangles
 function createRectangleElement(
   rectData: {
     name?: string;
@@ -533,7 +553,7 @@ function createRectangleElement(
         }
       }
 
-      // ストロークの設定
+      // Set strokes
       if (strokes && Array.isArray(strokes)) {
         try {
           rect.strokes = strokes as Paint[];
@@ -545,11 +565,11 @@ function createRectangleElement(
       if (strokeWeight !== undefined) rect.strokeWeight = strokeWeight;
       if (strokeAlign) rect.strokeAlign = strokeAlign;
 
-      // 角丸の設定
+      // Set corner radius
       if (cornerRadius !== undefined) {
         rect.cornerRadius = cornerRadius;
       } else {
-        // 個別の角丸を設定
+        // Set individual corner radius
         if (topLeftRadius !== undefined) rect.topLeftRadius = topLeftRadius;
         if (topRightRadius !== undefined) rect.topRightRadius = topRightRadius;
         if (bottomLeftRadius !== undefined)
@@ -558,10 +578,10 @@ function createRectangleElement(
           rect.bottomRightRadius = bottomRightRadius;
       }
 
-      // 透明度の設定
+      // Set opacity
       if (opacity !== undefined) rect.opacity = opacity;
 
-      // エフェクトの設定
+      // Set effects
       if (effects && Array.isArray(effects)) {
         try {
           rect.effects = effects as Effect[];
@@ -570,10 +590,10 @@ function createRectangleElement(
         }
       }
 
-      // 表示/非表示の設定
+      // Set visibility
       if (visible !== undefined) rect.visible = visible;
 
-      // 現在のページに追加
+      // Add to current page
       figma.currentPage.appendChild(rect);
 
       resolve(rect);
@@ -584,7 +604,7 @@ function createRectangleElement(
   });
 }
 
-// 楕円を作成する関数
+// Function to create ellipses
 function createEllipseElement(
   ellipseData: {
     name?: string;
@@ -642,7 +662,7 @@ function createEllipseElement(
         }
       }
 
-      // ストロークの設定
+      // Set strokes
       if (strokes && Array.isArray(strokes)) {
         try {
           ellipse.strokes = strokes as Paint[];
@@ -654,15 +674,15 @@ function createEllipseElement(
       if (strokeWeight !== undefined) ellipse.strokeWeight = strokeWeight;
       if (strokeAlign) ellipse.strokeAlign = strokeAlign;
 
-      // 弧データの設定
+      // Set arc data
       if (arcData) {
         ellipse.arcData = arcData;
       }
 
-      // 透明度の設定
+      // Set opacity
       if (opacity !== undefined) ellipse.opacity = opacity;
 
-      // エフェクトの設定
+      // Set effects
       if (effects && Array.isArray(effects)) {
         try {
           ellipse.effects = effects as Effect[];
@@ -671,10 +691,10 @@ function createEllipseElement(
         }
       }
 
-      // 表示/非表示の設定
+      // Set visibility
       if (visible !== undefined) ellipse.visible = visible;
 
-      // 現在のページに追加
+      // Add to current page
       figma.currentPage.appendChild(ellipse);
 
       resolve(ellipse);
@@ -685,7 +705,7 @@ function createEllipseElement(
   });
 }
 
-// 線を作成する関数
+// Function to create lines
 function createLineElement(
   lineData: {
     name?: string;
@@ -720,15 +740,15 @@ function createLineElement(
     return null;
   }
 
-  // 線の始点と終点
+  // Line start and end points
   const startPoint = points[0];
   const endPoint = points[points.length - 1];
 
-  // 線を作成（実際にはベクターネットワークを使用）
+  // Create line (actually uses vector network)
   const line = figma.createLine();
   line.name = name || `Line ${index !== undefined ? index + 1 : ""}`;
 
-  // 始点と終点を設定
+  // Set start and end points
   line.x = startPoint.x;
   line.y = startPoint.y;
   line.resize(
@@ -744,7 +764,7 @@ function createLineElement(
       console.error("Error setting strokes:", e);
     }
   } else {
-    // デフォルトのストローク
+    // Default stroke
     line.strokes = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }];
   }
 
@@ -772,7 +792,7 @@ function createLineElement(
   return line;
 }
 
-// 画像の挿入
+// Insert image
 function createImageElement(
   imageData: {
     name?: string;
@@ -801,7 +821,7 @@ function createImageElement(
     visible,
   } = imageData;
 
-  // 画像を挿入するためのRectangleを作成
+  // Create Rectangle for image insertion
   const rect = figma.createRectangle();
   rect.name = name || `Image ${index !== undefined ? index + 1 : ""}`;
   rect.resize(width || 100, height || 100);
@@ -810,11 +830,11 @@ function createImageElement(
   if (x !== undefined) rect.x = x;
   if (y !== undefined) rect.y = y;
 
-  // 画像URLからFigmaで使用できる画像を取得（非同期処理）
+  // Get image usable in Figma from image URL (asynchronous processing)
   figma
     .createImageAsync(imageUrl)
     .then((image) => {
-      // 画像を塗りつぶしとして設定
+      // Set image as fill
       const imageFill: ImagePaint = {
         type: "IMAGE",
         imageHash: image.hash,
@@ -823,10 +843,10 @@ function createImageElement(
 
       rect.fills = [imageFill];
 
-      // 透明度の設定
+      // Set opacity
       if (opacity !== undefined) rect.opacity = opacity;
 
-      // エフェクトの設定
+      // Set effects
       if (effects && Array.isArray(effects)) {
         try {
           rect.effects = effects as Effect[];
@@ -835,12 +855,12 @@ function createImageElement(
         }
       }
 
-      // 表示/非表示の設定
+      // Set visibility
       if (visible !== undefined) rect.visible = visible;
     })
     .catch((error) => {
       console.error("Error creating image:", error);
-      // エラー時は赤い矩形を表示
+      // Display red rectangle on error
       rect.fills = [{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }];
     });
 
@@ -1022,7 +1042,7 @@ async function createNode(data: {
   }
 
   // Apply properties
-  applyPropertiesToNode(node, properties);
+  await applyPropertiesToNode(node, properties);
 
   // Set parent node
   let parent: ChildrenMixin = figma.currentPage;
@@ -1050,7 +1070,7 @@ async function updateNode(data: {
 }) {
   const { nodeId, properties, parentId, index } = data;
 
-  console.log(`[updateNode] Starting update for node ${nodeId}`);
+  if (DEBUG) console.log(`[updateNode] Starting update for node ${nodeId}`);
   logToUI(`[updateNode] Starting update for node ${nodeId}`);
 
   const node = findNodeById(nodeId);
@@ -1061,7 +1081,8 @@ async function updateNode(data: {
     throw new Error(error);
   }
 
-  console.log(`[updateNode] Found node: ${node.name} (${node.type})`);
+  if (DEBUG)
+    console.log(`[updateNode] Found node: ${node.name} (${node.type})`);
   logToUI(`[updateNode] Found node: ${node.name} (${node.type})`);
 
   // Change parent node if needed
@@ -1079,28 +1100,44 @@ async function updateNode(data: {
 
   // Update properties
   if (properties) {
-    console.log(`[updateNode] Properties received:`, JSON.stringify(properties, null, 2));
+    if (DEBUG)
+      console.log(
+        `[updateNode] Properties received:`,
+        JSON.stringify(properties, null, 2)
+      );
     logToUI(`[updateNode] Properties received: ${JSON.stringify(properties)}`);
-    
+
     if (properties.fills) {
-      console.log(`[updateNode] Fills in properties:`, JSON.stringify(properties.fills, null, 2));
-      logToUI(`[updateNode] Fills in properties: ${JSON.stringify(properties.fills)}`);
+      if (DEBUG)
+        console.log(
+          `[updateNode] Fills in properties:`,
+          JSON.stringify(properties.fills, null, 2)
+        );
+      logToUI(
+        `[updateNode] Fills in properties: ${JSON.stringify(properties.fills)}`
+      );
     }
-    
-    applyPropertiesToNode(node, properties);
-    
+
+    await applyPropertiesToNode(node, properties);
+
     // Log what was actually set
     if ("fills" in node) {
       const paintNode = node as GeometryMixin;
-      console.log(`[updateNode] Fills after applying:`, JSON.stringify(paintNode.fills, null, 2));
-      logToUI(`[updateNode] Fills after applying: ${JSON.stringify(paintNode.fills)}`);
+      if (DEBUG)
+        console.log(
+          `[updateNode] Fills after applying:`,
+          JSON.stringify(paintNode.fills, null, 2)
+        );
+      logToUI(
+        `[updateNode] Fills after applying: ${JSON.stringify(paintNode.fills)}`
+      );
     }
   } else {
-    console.log(`[updateNode] No properties to update`);
+    if (DEBUG) console.log(`[updateNode] No properties to update`);
     logToUI(`[updateNode] No properties to update`);
   }
-  
-  console.log(`[updateNode] Update complete for node ${nodeId}`);
+
+  if (DEBUG) console.log(`[updateNode] Update complete for node ${nodeId}`);
   logToUI(`[updateNode] Update complete for node ${nodeId}`);
 }
 
@@ -1149,7 +1186,7 @@ function findNodeById(nodeId: string): SceneNode | null {
 }
 
 // Generic function to apply properties to node
-function applyPropertiesToNode(
+async function applyPropertiesToNode(
   node: SceneNode,
   properties: Record<string, any>
 ) {
@@ -1177,68 +1214,331 @@ function applyPropertiesToNode(
     }
   }
 
+  // Handle boundVariables for simple fields (width, height, etc.) - fills/strokes handled separately
+  // Note: Only process fills/strokes/effects in boundVariables after fills/strokes arrays are set
+  if (properties.boundVariables !== undefined) {
+    const boundVars = properties.boundVariables as Record<string, any>;
+    if (DEBUG)
+      console.log(
+        "[applyPropertiesToNode] Processing boundVariables (excluding fills/strokes/effects):",
+        JSON.stringify(boundVars, null, 2)
+      );
+
+    // Detect common error: boundVariables at top level for fills/strokes
+    if (boundVars.fills || boundVars.strokes) {
+      console.warn(
+        "[applyPropertiesToNode] WARNING: boundVariables.fills or boundVariables.strokes found at top level. " +
+          "This format is deprecated. Put boundVariables INSIDE each fill/stroke object instead. " +
+          "Example: {fills: [{type: 'SOLID', boundVariables: {color: {type: 'VARIABLE_ALIAS', id: 'VariableID:27:17'}}}]}"
+      );
+      figma.notify(
+        "Variable binding format error: boundVariables must be inside each fill/stroke object, not at top level",
+        { error: true }
+      );
+    }
+
+    // Skip fills/strokes/effects - they're handled separately after the fills/strokes arrays are set
+    const fieldsToSkip = ["fills", "strokes", "effects"];
+
+    // Handle simple fields like width, height, opacity (not fills/strokes/effects)
+    for (const [field, alias] of Object.entries(boundVars)) {
+      if (fieldsToSkip.includes(field)) {
+        continue; // Skip - handled separately
+      }
+
+      // Simple field binding - extract variable ID from VARIABLE_ALIAS
+      try {
+        if (alias && typeof alias === "object" && alias.id) {
+          const variableId = alias.id.startsWith("VariableID:")
+            ? alias.id
+            : `VariableID:${alias.id}`;
+          const variable = await figma.variables.getVariableByIdAsync(
+            variableId
+          );
+          if (!variable) {
+            console.warn(
+              `[applyPropertiesToNode] Variable ${variableId} not found for field ${field}`
+            );
+            continue;
+          }
+
+          // Check if node supports setBoundVariable
+          if (
+            !("setBoundVariable" in node) ||
+            typeof (node as any).setBoundVariable !== "function"
+          ) {
+            console.warn(
+              `[applyPropertiesToNode] Node does not support setBoundVariable for field ${field}`
+            );
+            continue;
+          }
+
+          // Try to bind the variable
+          try {
+            (node as any).setBoundVariable(field, variable);
+            if (DEBUG)
+              console.log(
+                `[applyPropertiesToNode] Bound variable ${variableId} to field ${field}`
+              );
+          } catch (bindError) {
+            // This field doesn't support variable binding
+            console.warn(
+              `[applyPropertiesToNode] Cannot bind variable to field ${field}:`,
+              bindError
+            );
+          }
+        }
+      } catch (e) {
+        // Error processing this field - log and continue
+        console.warn(
+          `[applyPropertiesToNode] Error processing boundVariable for field ${field}:`,
+          e
+        );
+      }
+    }
+  }
+
   // Fills and strokes (support variables)
   if ("fills" in node) {
     const paintNode = node as GeometryMixin;
     if (properties.fills !== undefined) {
       try {
-        console.log('[applyPropertiesToNode] Processing fills, input:', JSON.stringify(properties.fills, null, 2));
-        
+        if (DEBUG)
+          console.log(
+            "[applyPropertiesToNode] Processing fills, input:",
+            JSON.stringify(properties.fills, null, 2)
+          );
+
         // Support variable references in fills and normalize opacity
-        const fills = properties.fills.map((fill: any, index: number) => {
-          console.log(`[applyPropertiesToNode] Processing fill ${index}:`, JSON.stringify(fill, null, 2));
-          
+        const fills: any[] = [];
+        for (let index = 0; index < properties.fills.length; index++) {
+          const fill = properties.fills[index];
+          if (DEBUG)
+            console.log(
+              `[applyPropertiesToNode] Processing fill ${index}:`,
+              JSON.stringify(fill, null, 2)
+            );
+
           if (fill.type === "VARIABLE" && fill.variableId) {
             // Variable paint is already in the correct format
-            console.log(`[applyPropertiesToNode] Fill ${index} is VARIABLE type, returning as-is`);
-            return fill;
+            if (DEBUG)
+              console.log(
+                `[applyPropertiesToNode] Fill ${index} is VARIABLE type, returning as-is`
+              );
+            fills.push(fill);
+            continue;
           }
+
+          // Handle boundVariables with VARIABLE_ALIAS format
+          // Format: { type: "SOLID", boundVariables: { color: { type: "VARIABLE_ALIAS", id: "VariableID:27:17" } } }
+          if (fill.boundVariables && fill.boundVariables.color) {
+            const alias = fill.boundVariables.color;
+            if (alias.type === "VARIABLE_ALIAS" && alias.id) {
+              const variableId = alias.id.startsWith("VariableID:")
+                ? alias.id
+                : `VariableID:${alias.id}`;
+              const variable = await figma.variables.getVariableByIdAsync(
+                variableId
+              );
+              if (variable) {
+                // Use Figma's helper method to bind variable to paint
+                // Create a base paint first if needed - ensure color.a is removed
+                let paint: SolidPaint;
+                if (fill.type === "SOLID") {
+                  // Normalize the paint - remove color.a if it exists
+                  const color = fill.color
+                    ? { ...fill.color }
+                    : { r: 0, g: 0, b: 0 };
+                  if ("a" in color) {
+                    delete (color as any).a;
+                  }
+                  paint = {
+                    type: "SOLID",
+                    color: color as { r: number; g: number; b: number },
+                    opacity: fill.opacity !== undefined ? fill.opacity : 1,
+                    visible: fill.visible !== false,
+                  };
+                } else {
+                  paint = {
+                    type: "SOLID",
+                    color: { r: 0, g: 0, b: 0 },
+                    opacity: fill.opacity !== undefined ? fill.opacity : 1,
+                    visible: fill.visible !== false,
+                  };
+                }
+                const boundPaint = figma.variables.setBoundVariableForPaint(
+                  paint,
+                  "color",
+                  variable
+                );
+                if (DEBUG)
+                  console.log(
+                    `[applyPropertiesToNode] Bound variable ${variableId} to fill ${index} color`
+                  );
+                fills.push(boundPaint);
+                continue;
+              } else {
+                console.warn(
+                  `[applyPropertiesToNode] Variable ${variableId} not found for fill ${index}, continuing with normal processing`
+                );
+              }
+            }
+          }
+
           // For SOLID paints, ensure opacity is properly set
           if (fill.type === "SOLID") {
-            console.log(`[applyPropertiesToNode] Fill ${index} is SOLID type, normalizing...`);
-            console.log(`[applyPropertiesToNode] Fill ${index} - opacity in input:`, fill.opacity);
-            console.log(`[applyPropertiesToNode] Fill ${index} - color.a in input:`, fill.color?.a);
-            
+            if (DEBUG)
+              console.log(
+                `[applyPropertiesToNode] Fill ${index} is SOLID type, normalizing...`
+              );
+            if (DEBUG)
+              console.log(
+                `[applyPropertiesToNode] Fill ${index} - opacity in input:`,
+                fill.opacity
+              );
+            if (DEBUG)
+              console.log(
+                `[applyPropertiesToNode] Fill ${index} - color.a in input:`,
+                fill.color?.a
+              );
+
             // Create a new fill object with opacity preserved
             const normalizedFill: any = {
               type: "SOLID",
             };
-            
-            // Handle color - remove 'a' if opacity is specified separately
+
+            // Handle color - ALWAYS remove 'a' as Figma API doesn't allow it in color objects
             if (fill.color) {
               const color = { ...fill.color };
-              // If opacity is specified on the fill, remove 'a' from color to avoid conflicts
-              if (fill.opacity !== undefined && "a" in color) {
-                console.log(`[applyPropertiesToNode] Fill ${index} - Removing color.a (${color.a}) because opacity (${fill.opacity}) is specified`);
-                delete color.a;
+              // Always remove 'a' from color - Figma doesn't allow it in color objects
+              if ("a" in color) {
+                if (DEBUG)
+                  console.log(
+                    `[applyPropertiesToNode] Fill ${index} - Removing color.a (${color.a})`
+                  );
+                delete (color as any).a;
               }
-              normalizedFill.color = color;
-              console.log(`[applyPropertiesToNode] Fill ${index} - Normalized color:`, JSON.stringify(color));
+              normalizedFill.color = color as {
+                r: number;
+                g: number;
+                b: number;
+              };
+              if (DEBUG)
+                console.log(
+                  `[applyPropertiesToNode] Fill ${index} - Normalized color:`,
+                  JSON.stringify(color)
+                );
             } else {
               normalizedFill.color = { r: 0, g: 0, b: 0 };
             }
-            
+
             // Set opacity if provided
             if (fill.opacity !== undefined) {
               normalizedFill.opacity = fill.opacity;
-              console.log(`[applyPropertiesToNode] Fill ${index} - Set opacity to:`, fill.opacity);
+              if (DEBUG)
+                console.log(
+                  `[applyPropertiesToNode] Fill ${index} - Set opacity to:`,
+                  fill.opacity
+                );
             }
-            
+
             // Preserve other properties
-            if (fill.blendMode !== undefined) normalizedFill.blendMode = fill.blendMode;
-            if (fill.visible !== undefined) normalizedFill.visible = fill.visible;
-            
-            console.log(`[applyPropertiesToNode] Fill ${index} normalized result:`, JSON.stringify(normalizedFill, null, 2));
-            return normalizedFill;
+            if (fill.blendMode !== undefined)
+              normalizedFill.blendMode = fill.blendMode;
+            if (fill.visible !== undefined)
+              normalizedFill.visible = fill.visible;
+
+            if (DEBUG)
+              console.log(
+                `[applyPropertiesToNode] Fill ${index} normalized result:`,
+                JSON.stringify(normalizedFill, null, 2)
+              );
+            fills.push(normalizedFill);
+            continue;
           }
-          console.log(`[applyPropertiesToNode] Fill ${index} is not SOLID or VARIABLE, returning as-is`);
-          return fill;
-        });
-        
-        console.log('[applyPropertiesToNode] All normalized fills:', JSON.stringify(fills, null, 2));
+          if (DEBUG)
+            console.log(
+              `[applyPropertiesToNode] Fill ${index} is not SOLID or VARIABLE, returning as-is`
+            );
+          fills.push(fill);
+        }
+
+        if (DEBUG)
+          console.log(
+            "[applyPropertiesToNode] All normalized fills:",
+            JSON.stringify(fills, null, 2)
+          );
         paintNode.fills = fills as Paint[];
-        console.log('[applyPropertiesToNode] Fills set on node. Verifying what was actually set...');
-        console.log('[applyPropertiesToNode] Node fills after assignment:', JSON.stringify(paintNode.fills, null, 2));
+        if (DEBUG)
+          console.log(
+            "[applyPropertiesToNode] Fills set on node. Verifying what was actually set..."
+          );
+        if (DEBUG)
+          console.log(
+            "[applyPropertiesToNode] Node fills after assignment:",
+            JSON.stringify(paintNode.fills, null, 2)
+          );
+
+        // Handle top-level boundVariables.fills after fills are set
+        const boundVars = properties.boundVariables as
+          | Record<string, any>
+          | undefined;
+        if (boundVars && boundVars.fills && Array.isArray(boundVars.fills)) {
+          const fillsCopy = [...paintNode.fills];
+          for (let index = 0; index < boundVars.fills.length; index++) {
+            const alias = boundVars.fills[index];
+            if (
+              alias &&
+              alias.type === "VARIABLE_ALIAS" &&
+              alias.id &&
+              fillsCopy[index]
+            ) {
+              const variableId = alias.id.startsWith("VariableID:")
+                ? alias.id
+                : `VariableID:${alias.id}`;
+              const variable = await figma.variables.getVariableByIdAsync(
+                variableId
+              );
+              if (variable && fillsCopy[index].type === "SOLID") {
+                // Normalize the paint before binding - ensure color.a is removed
+                const existingPaint = fillsCopy[index] as SolidPaint;
+                const normalizedPaint: SolidPaint = {
+                  type: "SOLID",
+                  color:
+                    existingPaint.color &&
+                    typeof existingPaint.color === "object" &&
+                    !("a" in existingPaint.color)
+                      ? existingPaint.color
+                      : existingPaint.color &&
+                        typeof existingPaint.color === "object"
+                      ? (() => {
+                          const color = { ...existingPaint.color };
+                          if ("a" in color) {
+                            delete (color as any).a;
+                          }
+                          return color as { r: number; g: number; b: number };
+                        })()
+                      : { r: 0, g: 0, b: 0 },
+                  opacity:
+                    existingPaint.opacity !== undefined
+                      ? existingPaint.opacity
+                      : 1,
+                  visible: existingPaint.visible !== false,
+                };
+                fillsCopy[index] = figma.variables.setBoundVariableForPaint(
+                  normalizedPaint,
+                  "color",
+                  variable
+                );
+                if (DEBUG)
+                  console.log(
+                    `[applyPropertiesToNode] Bound variable ${variableId} to fills[${index}] color`
+                  );
+              }
+            }
+          }
+          paintNode.fills = fillsCopy;
+        }
       } catch (e) {
         console.error("[applyPropertiesToNode] Error setting fills:", e);
       }
@@ -1421,7 +1721,7 @@ async function getVariables() {
     figma.notify(`Retrieved ${variables.length} variables`);
 
     // Send variables back to server (could be enhanced to return via API)
-    console.log("Variables:", JSON.stringify(result, null, 2));
+    if (DEBUG) console.log("Variables:", JSON.stringify(result, null, 2));
   } catch (error) {
     console.error("Error getting variables:", error);
     logToUI(
@@ -1443,25 +1743,28 @@ async function createVariable(data: {
   description?: string;
   scopes?: Array<
     | "ALL_SCOPES"
-    | "TEXT_COLOR"
-    | "BG_COLOR"
-    | "FILL_COLOR"
-    | "STROKE_COLOR"
+    | "TEXT_CONTENT"
+    | "CORNER_RADIUS"
+    | "WIDTH_HEIGHT"
+    | "GAP"
+    | "ALL_FILLS"
+    | "FRAME_FILL"
+    | "SHAPE_FILL"
+    | "TEXT_FILL"
+    | "STROKE_FLOAT"
+    | "EFFECT_FLOAT"
     | "EFFECT_COLOR"
     | "OPACITY"
+    | "FONT_STYLE"
     | "FONT_FAMILY"
     | "FONT_SIZE"
-    | "FONT_WEIGHT"
     | "LINE_HEIGHT"
     | "LETTER_SPACING"
     | "PARAGRAPH_SPACING"
     | "PARAGRAPH_INDENT"
-    | "BORDER_RADIUS"
-    | "SPACING"
-    | "DIMENSION"
-    | "GAP"
-    | "SIZING_WIDTH"
-    | "SIZING_HEIGHT"
+    | "TRANSFORM"
+    | "STROKE_COLOR"
+    | "FONT_WEIGHT"
   >;
 }) {
   try {
@@ -1568,31 +1871,34 @@ async function updateVariable(data: {
   description?: string;
   scopes?: Array<
     | "ALL_SCOPES"
-    | "TEXT_COLOR"
-    | "BG_COLOR"
-    | "FILL_COLOR"
-    | "STROKE_COLOR"
+    | "TEXT_CONTENT"
+    | "CORNER_RADIUS"
+    | "WIDTH_HEIGHT"
+    | "GAP"
+    | "ALL_FILLS"
+    | "FRAME_FILL"
+    | "SHAPE_FILL"
+    | "TEXT_FILL"
+    | "STROKE_FLOAT"
+    | "EFFECT_FLOAT"
     | "EFFECT_COLOR"
     | "OPACITY"
+    | "FONT_STYLE"
     | "FONT_FAMILY"
     | "FONT_SIZE"
-    | "FONT_WEIGHT"
     | "LINE_HEIGHT"
     | "LETTER_SPACING"
     | "PARAGRAPH_SPACING"
     | "PARAGRAPH_INDENT"
-    | "BORDER_RADIUS"
-    | "SPACING"
-    | "DIMENSION"
-    | "GAP"
-    | "SIZING_WIDTH"
-    | "SIZING_HEIGHT"
+    | "TRANSFORM"
+    | "STROKE_COLOR"
+    | "FONT_WEIGHT"
   >;
 }) {
   try {
     const { variableId, name, valuesByMode, description, scopes } = data;
 
-    const variable = figma.variables.getVariableById(variableId);
+    const variable = await figma.variables.getVariableByIdAsync(variableId);
     if (!variable) {
       throw new Error(`Variable with id ${variableId} not found`);
     }
@@ -1641,7 +1947,7 @@ async function deleteVariable(data: { variableId: string }) {
   try {
     const { variableId } = data;
 
-    const variable = figma.variables.getVariableById(variableId);
+    const variable = await figma.variables.getVariableByIdAsync(variableId);
     if (!variable) {
       throw new Error(`Variable with id ${variableId} not found`);
     }
@@ -1664,40 +1970,60 @@ async function deleteVariable(data: { variableId: string }) {
 }
 
 // Handle messages from UI
-console.log("[code.ts] Setting up message handler");
+if (DEBUG) console.log("[code.ts] Setting up message handler");
 logToUI("[code.ts] Setting up message handler");
 
 figma.ui.onmessage = async (msg) => {
-  console.log("[code.ts] Received message from UI:", JSON.stringify(msg, null, 2));
+  if (DEBUG)
+    console.log(
+      "[code.ts] Received message from UI:",
+      JSON.stringify(msg, null, 2)
+    );
   logToUI("[code.ts] Received message from UI: " + JSON.stringify(msg));
-  
+
   if (msg.type === "register") {
-    console.log("[code.ts] Handling register message");
+    if (DEBUG) console.log("[code.ts] Handling register message");
     logToUI("[code.ts] Handling register message");
     healthcheckWithServer();
   } else if (msg.type === "cancel") {
-    console.log("[code.ts] Handling cancel message");
+    if (DEBUG) console.log("[code.ts] Handling cancel message");
     logToUI("[code.ts] Handling cancel message");
     // Ask UI to close WebSocket connection
     figma.ui.postMessage({ type: "disconnect-websocket" });
     figma.closePlugin();
   } else if (msg.type === "websocket-update") {
     // Handle updates received via WebSocket from UI
-    console.log("[code.ts] Received websocket-update message:", JSON.stringify(msg, null, 2));
-    logToUI("[code.ts] Received websocket-update message: " + JSON.stringify(msg));
-    
+    if (DEBUG)
+      console.log(
+        "[code.ts] Received websocket-update message:",
+        JSON.stringify(msg, null, 2)
+      );
+    logToUI(
+      "[code.ts] Received websocket-update message: " + JSON.stringify(msg)
+    );
+
     try {
-      console.log("[code.ts] Calling applyUpdates with:", JSON.stringify(msg.updates, null, 2));
-      logToUI("[code.ts] Calling applyUpdates with: " + JSON.stringify(msg.updates));
+      if (DEBUG)
+        console.log(
+          "[code.ts] Calling applyUpdates with:",
+          JSON.stringify(msg.updates, null, 2)
+        );
+      logToUI(
+        "[code.ts] Calling applyUpdates with: " + JSON.stringify(msg.updates)
+      );
       await applyUpdates(msg.updates);
-      console.log("[code.ts] applyUpdates completed successfully");
+      if (DEBUG) console.log("[code.ts] applyUpdates completed successfully");
       logToUI("[code.ts] applyUpdates completed successfully");
     } catch (error) {
       console.error("[code.ts] Error applying updates:", error);
-      logToUI("Error occurred while applying updates: " + (error instanceof Error ? error.message : String(error)), "error");
+      logToUI(
+        "Error occurred while applying updates: " +
+          (error instanceof Error ? error.message : String(error)),
+        "error"
+      );
     }
   } else {
-    console.log("[code.ts] Unknown message type:", msg.type);
+    if (DEBUG) console.log("[code.ts] Unknown message type:", msg.type);
     logToUI("[code.ts] Unknown message type: " + msg.type);
   }
 };
